@@ -1,0 +1,28 @@
+import type { ZodType } from "zod";
+
+/** Qué control muestra el inspector para este field. */
+export type FieldControl =
+	| "text"
+	| "textarea"
+	| "number"
+	| "select"
+	| "boolean"
+	| "color";
+
+/** Descriptor de una propiedad de un nodo. */
+export interface FieldDescriptor<T = unknown> {
+	/** Validador Zod del valor base (sin envolver en responsive/locale). */
+	schema: ZodType;
+	/** Control que el inspector renderiza. */
+	control: FieldControl;
+	/** Valor por defecto al crear el nodo. */
+	default?: T;
+	/** Etiqueta visible en el inspector. */
+	label?: string;
+	/** Si true, el valor puede traducirse por locale. */
+	localizable?: boolean;
+	/** Si true, el valor puede variar por breakpoint. */
+	responsive?: boolean;
+	/** Opciones, solo para control 'select'. */
+	options?: ReadonlyArray<{ label: string; value: T }>;
+}
