@@ -1,6 +1,7 @@
 export type { I18nConfig, KivDocument } from "./document";
 export type { KivNode } from "./node";
 export type {
+	Breakpoint,
 	Locale,
 	Localizable,
 	LocalizedObject,

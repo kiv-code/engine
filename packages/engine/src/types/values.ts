@@ -19,3 +19,5 @@ export interface LocalizedObject<T> {
 
 /** Una propiedad de contenido: valor único o traducido. */
 export type Localizable<T> = T | LocalizedObject<T>;
+
+export type Breakpoint = "base" | "sm" | "md" | "lg" | "xl";
