@@ -1,5 +1,6 @@
 export const version = "0.0.0";
 
+export { createRegistry, Registry } from "./registry";
 export {
 	type CompiledNode,
 	defineNode,
