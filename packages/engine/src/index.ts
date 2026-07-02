@@ -1,4 +1,12 @@
 export const version = "0.0.0";
+export {
+	createEventBus,
+	type ErrorHandler,
+	type EventBus,
+	type EventHandler,
+	type KivEventMap,
+	type WildcardHandler,
+} from "./events";
 
 export {
 	buildLocaleFallbackChain,
