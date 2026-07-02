@@ -1,5 +1,15 @@
 export const version = "0.0.0";
 
+export {
+	buildLocaleFallbackChain,
+	validateI18nConfig,
+} from "./i18n";
+export {
+	CURRENT_SCHEMA_VERSION,
+	type Migration,
+	migrateDocument,
+	migrations,
+} from "./migrations";
 export { createRegistry, Registry } from "./registry";
 export {
 	isLocalized,
@@ -20,6 +30,14 @@ export {
 	type InferProps,
 	type NodeDefinition,
 } from "./schema";
+export {
+	defaultTheme,
+	resolveTheme,
+	type ThemeOverride,
+	type ThemeTokens,
+	themeToCssVars,
+	tokenRef,
+} from "./theme";
 export type {
 	Breakpoint,
 	I18nConfig,
