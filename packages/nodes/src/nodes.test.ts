@@ -82,7 +82,7 @@ describe("content nodes", () => {
 
 	it("text: type and default size", () => {
 		expect(textNode.type).toBe("text");
-		expect(textNode.defaults.size).toBe("base");
+		expect(textNode.defaults.size).toBe(16);
 	});
 
 	it("button: type and navigation defaults", () => {

@@ -4,7 +4,12 @@ export const buttonNode = defineNode({
 	type: "button",
 	category: "content",
 	fields: {
-		label: f.text({ label: "Label", localizable: true, group: "Content" }),
+		label: f.text({
+			label: "Label",
+			localizable: true,
+			group: "Content",
+			inline: true,
+		}),
 		href: f.text({ label: "Href", default: "#", group: "Link" }),
 		target: f.select(["_self", "_blank"], {
 			label: "Target",

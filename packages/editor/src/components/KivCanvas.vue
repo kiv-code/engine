@@ -3,6 +3,7 @@ import type { Breakpoint } from "@kiv/engine";
 import type { VueRegistry } from "@kiv/vue";
 import { KivRenderer } from "@kiv/vue";
 import { computed, inject, ref, watch } from "vue";
+import { useInlineEdit } from "../composables/useInlineEdit";
 import { EDITOR_STORE_KEY } from "../store/context";
 
 defineProps<{ registry: VueRegistry }>();
@@ -33,12 +34,22 @@ const BP_LABELS: Record<string, string> = {
 const canvasWidth = computed(() => CANVAS_WIDTHS[breakpoint.value] ?? "100%");
 const bpLabel = computed(() => BP_LABELS[breakpoint.value] ?? "");
 
+// Inline edit — only wired up when store is available
+const { onCanvasDblClick, deactivate } = store
+	? useInlineEdit(store)
+	: { onCanvasDblClick: () => {}, deactivate: () => {} };
+
 function onCanvasClick(e: MouseEvent) {
+	// Don't steal click from an active contenteditable
+	const active = document.activeElement as HTMLElement | null;
+	if (active?.contentEditable === "true") return;
+
 	const target = (e.target as HTMLElement).closest(
 		"[data-kiv-node-id]",
 	) as HTMLElement | null;
 	const id = target?.dataset.kivNodeId ?? null;
 	store?.select(id);
+	if (!id) deactivate();
 }
 
 watch(
@@ -51,15 +62,18 @@ watch(
 				`[data-kiv-node-id="${oldId}"]`,
 			) as HTMLElement | null;
 			if (prev) {
-				prev.style.outline = "";
-				prev.style.outlineOffset = "";
+				// Don't clear outline if element is in inline-edit mode
+				if (prev.getAttribute("data-kiv-editing") !== "true") {
+					prev.style.outline = "";
+					prev.style.outlineOffset = "";
+				}
 			}
 		}
 		if (newId) {
 			const next = canvas.querySelector(
 				`[data-kiv-node-id="${newId}"]`,
 			) as HTMLElement | null;
-			if (next) {
+			if (next && next.getAttribute("data-kiv-editing") !== "true") {
 				next.style.outline = "2px solid #6366f1";
 				next.style.outlineOffset = "-2px";
 			}
@@ -69,7 +83,7 @@ watch(
 </script>
 
 <template>
-	<div class="kiv-canvas" @click.stop="onCanvasClick">
+	<div class="kiv-canvas" @click.stop="onCanvasClick" @dblclick.stop="onCanvasDblClick">
 		<div class="kiv-canvas__bp-label">{{ bpLabel }}</div>
 		<div class="kiv-canvas__stage">
 			<div
@@ -82,6 +96,7 @@ watch(
 					:document="store.document.value"
 					:registry="registry"
 					:breakpoint="breakpoint"
+					:editor-mode="true"
 				/>
 			</div>
 		</div>

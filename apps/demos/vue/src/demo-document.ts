@@ -54,7 +54,7 @@ export const demoDocument: KivDocument = {
 															content:
 																"Kiv is a headless, JSON-driven, plugin-based visual engine for Vue, React and beyond.",
 															color: "#94a3b8",
-															size: "lg",
+															size: 18,
 															align: "center",
 														},
 													},
@@ -177,7 +177,7 @@ export const demoDocument: KivDocument = {
 																							props: {
 																								content:
 																									"Framework-agnostic core. Use Vue, React, or any renderer.",
-																								size: "base",
+																								size: 16,
 																								color: "#475569",
 																							},
 																						},
@@ -217,7 +217,7 @@ export const demoDocument: KivDocument = {
 																							props: {
 																								content:
 																									"Your document is pure JSON. Store it anywhere, version it, migrate it.",
-																								size: "base",
+																								size: 16,
 																								color: "#475569",
 																							},
 																						},
@@ -257,7 +257,7 @@ export const demoDocument: KivDocument = {
 																							props: {
 																								content:
 																									"Extend the engine with plugins. Analytics, forms, modals — never touch the core.",
-																								size: "base",
+																								size: 16,
 																								color: "#475569",
 																							},
 																						},

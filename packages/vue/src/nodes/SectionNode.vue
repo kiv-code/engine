@@ -24,19 +24,34 @@ const props = defineProps<{
 	minHeight?: string;
 }>();
 
-const blurMap: Record<string, string> = {
+const BLUR_MAP: Record<string, string> = {
 	none: "0",
 	sm: "4px",
 	md: "8px",
 	lg: "16px",
 };
 
-const radiusMap: Record<string, string> = {
+const RADIUS_MAP: Record<string, string> = {
 	none: "0",
-	sm: "var(--kiv-radius-sm, 0.25rem)",
-	md: "var(--kiv-radius-md, 0.5rem)",
-	lg: "var(--kiv-radius-lg, 1rem)",
-	full: "var(--kiv-radius-full, 9999px)",
+	sm: "4px",
+	md: "8px",
+	lg: "16px",
+	full: "9999px",
+};
+
+const SHADOW_MAP: Record<string, string> = {
+	none: "none",
+	sm: "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)",
+	md: "0 4px 16px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.1)",
+	lg: "0 10px 40px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.12)",
+};
+
+const SPACING_MAP: Record<string, string> = {
+	none: "0",
+	sm: "16px",
+	md: "32px",
+	lg: "64px",
+	xl: "96px",
 };
 
 const sectionStyle = computed(() => {
@@ -53,25 +68,25 @@ const sectionStyle = computed(() => {
 	if (props.gradient) {
 		s["background-image"] = props.gradient;
 	}
-	if (props.blur && props.blur !== "none") {
-		s["backdrop-filter"] = `blur(${blurMap[props.blur] ?? props.blur})`;
-	}
 	if (props.opacity !== undefined && props.opacity !== 1) {
 		s.opacity = String(props.opacity);
 	}
 
-	// Spacing via tokens
+	// Spacing — real px values, no tokens
 	if (props.paddingY && props.paddingY !== "none") {
-		s["padding-top"] = `var(--kiv-spacing-${props.paddingY})`;
-		s["padding-bottom"] = `var(--kiv-spacing-${props.paddingY})`;
+		const v = SPACING_MAP[props.paddingY] ?? props.paddingY;
+		s["padding-top"] = v;
+		s["padding-bottom"] = v;
 	}
 	if (props.paddingX && props.paddingX !== "none") {
-		s["padding-left"] = `var(--kiv-spacing-${props.paddingX})`;
-		s["padding-right"] = `var(--kiv-spacing-${props.paddingX})`;
+		const v = SPACING_MAP[props.paddingX] ?? props.paddingX;
+		s["padding-left"] = v;
+		s["padding-right"] = v;
 	}
 	if (props.marginY && props.marginY !== "none") {
-		s["margin-top"] = `var(--kiv-spacing-${props.marginY})`;
-		s["margin-bottom"] = `var(--kiv-spacing-${props.marginY})`;
+		const v = SPACING_MAP[props.marginY] ?? props.marginY;
+		s["margin-top"] = v;
+		s["margin-bottom"] = v;
 	}
 
 	// Border
@@ -81,17 +96,30 @@ const sectionStyle = computed(() => {
 		if (props.borderColor) s["border-color"] = props.borderColor;
 	}
 	if (props.borderRadius && props.borderRadius !== "none") {
-		s["border-radius"] = radiusMap[props.borderRadius] ?? props.borderRadius;
+		s["border-radius"] = RADIUS_MAP[props.borderRadius] ?? props.borderRadius;
 	}
 
 	if (props.shadow && props.shadow !== "none") {
-		s["box-shadow"] = `var(--kiv-shadow-${props.shadow})`;
+		s["box-shadow"] = SHADOW_MAP[props.shadow] ?? props.shadow;
 	}
 	if (props.minHeight) {
 		s["min-height"] = props.minHeight;
 	}
 
 	return s;
+});
+
+// Blur applies to the background layer pseudo-element via a separate div
+const bgBlurStyle = computed(() => {
+	const amount = BLUR_MAP[props.blur ?? "none"] ?? "0";
+	if (amount === "0") return null;
+	return {
+		position: "absolute" as const,
+		inset: "0",
+		backdropFilter: `blur(${amount})`,
+		pointerEvents: "none" as const,
+		zIndex: "0",
+	};
 });
 </script>
 
@@ -101,6 +129,13 @@ const sectionStyle = computed(() => {
 		data-kiv-type="section"
 		class="kiv-section"
 	>
+		<!-- Background video -->
+		<div v-if="backgroundVideo" class="kiv-section__video-bg">
+			<video autoplay muted loop playsinline :src="backgroundVideo" />
+		</div>
+		<!-- Backdrop blur layer (sits above bg, below content) -->
+		<div v-if="bgBlurStyle" :style="bgBlurStyle" />
+		<!-- Overlay -->
 		<div
 			v-if="overlay"
 			class="kiv-section__overlay"
@@ -109,9 +144,6 @@ const sectionStyle = computed(() => {
 				opacity: String(overlayOpacity ?? 0.4),
 			}"
 		/>
-		<div v-if="backgroundVideo" class="kiv-section__video-bg">
-			<video autoplay muted loop playsinline :src="backgroundVideo" />
-		</div>
 		<div class="kiv-section__content">
 			<slot />
 		</div>

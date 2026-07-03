@@ -1,4 +1,4 @@
-import { defineNode, f, tokenRef } from "@kiv/engine";
+import { defineNode, f } from "@kiv/engine";
 
 export const textNode = defineNode({
 	type: "text",
@@ -8,16 +8,16 @@ export const textNode = defineNode({
 			label: "Content",
 			localizable: true,
 			group: "Content",
+			inline: true,
 		}),
 		color: f.color({
 			label: "Color",
-			default: tokenRef("colors", "foreground"),
+			default: "#000000",
 			group: "Typography",
 		}),
-		size: f.select(["sm", "base", "lg", "xl"], {
-			label: "Size",
-			default: "base",
-			responsive: true,
+		size: f.number({
+			label: "Size (px)",
+			default: 16,
 			group: "Typography",
 		}),
 		align: f.select(["left", "center", "right"], {

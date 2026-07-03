@@ -2,6 +2,7 @@
 import type { Breakpoint, KivDocument } from "@kiv/engine";
 import { computed, provide } from "vue";
 import { KIV_CONTEXT_KEY } from "./context";
+import { KIV_EDITOR_MODE_KEY } from "./editor-mode";
 import KivNodeRenderer from "./KivNodeRenderer.vue";
 import type { VueRegistry } from "./registry";
 
@@ -10,6 +11,7 @@ const props = defineProps<{
 	registry: VueRegistry;
 	locale?: string;
 	breakpoint?: Breakpoint;
+	editorMode?: boolean;
 }>();
 
 // Reactive provide — updates when breakpoint/locale props change
@@ -23,6 +25,7 @@ const ctx = computed(() => ({
 }));
 
 provide(KIV_CONTEXT_KEY, ctx);
+provide(KIV_EDITOR_MODE_KEY, props.editorMode ?? false);
 </script>
 
 <template>

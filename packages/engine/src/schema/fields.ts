@@ -7,6 +7,7 @@ interface BaseOptions<T> {
 	group?: string;
 	localizable?: boolean;
 	responsive?: boolean;
+	inline?: boolean;
 }
 
 function text(opts: BaseOptions<string> = {}): FieldDescriptor<string> {
