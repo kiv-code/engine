@@ -1,5 +1,10 @@
 export const version = "0.0.0";
 export {
+	type CreateEngineOptions,
+	createEngine,
+	type KivEngine,
+} from "./engine";
+export {
 	createEventBus,
 	type ErrorHandler,
 	type EventBus,
@@ -7,7 +12,6 @@ export {
 	type KivEventMap,
 	type WildcardHandler,
 } from "./events";
-
 export {
 	buildLocaleFallbackChain,
 	validateI18nConfig,
@@ -18,6 +22,7 @@ export {
 	migrateDocument,
 	migrations,
 } from "./migrations";
+export type { KivPlugin, PluginContext } from "./plugin";
 export { createRegistry, Registry } from "./registry";
 export {
 	isLocalized,
