@@ -1,5 +1,5 @@
 {
-	"name": "@kiv/vue",
+	"name": "@kiv/editor",
 	"version": "0.0.0",
 	"type": "module",
 	"exports": {
@@ -19,6 +19,7 @@
 	"dependencies": {
 		"@kiv/engine": "workspace:*",
 		"@kiv/nodes": "workspace:*",
+		"@kiv/vue": "workspace:*",
 		"vue": "^3.5.17"
 	},
 	"devDependencies": {
