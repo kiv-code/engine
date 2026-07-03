@@ -1,25 +1,32 @@
 import type { KivNode } from "@kiv/engine";
 import { resolveNode } from "@kiv/engine";
+import type { ComputedRef } from "vue";
 import { computed, inject } from "vue";
 import { KIV_CONTEXT_KEY } from "../context";
+import type { KivRenderContext } from "../context";
 
-/**
- * Provides the current node's resolved props inside a node component.
- * Must be used inside a component that receives a `node` prop and is
- * rendered by KivNodeRenderer.
- */
+function unwrapCtx(
+	raw: KivRenderContext | ComputedRef<KivRenderContext> | undefined,
+): KivRenderContext | undefined {
+	if (!raw) return undefined;
+	// ComputedRef has a `value` property and an effect symbol
+	if ("value" in raw && "effect" in raw) return (raw as ComputedRef<KivRenderContext>).value;
+	return raw as KivRenderContext;
+}
+
 export function useKivNode(node: KivNode) {
-	const ctx = inject(KIV_CONTEXT_KEY);
+	const raw = inject(KIV_CONTEXT_KEY);
+
+	const ctx = computed(() => unwrapCtx(raw));
 
 	const resolved = computed(() => {
-		if (!ctx) {
-			return { id: node.id, type: node.type, props: node.props };
-		}
-		return resolveNode(node, ctx.resolveCtx);
+		const c = ctx.value;
+		if (!c) return { id: node.id, type: node.type, props: node.props };
+		return resolveNode(node, c.resolveCtx);
 	});
 
-	const locale = computed(() => ctx?.resolveCtx.locale ?? "en");
-	const breakpoint = computed(() => ctx?.resolveCtx.breakpoint ?? "base");
+	const locale = computed(() => ctx.value?.resolveCtx.locale ?? "en");
+	const breakpoint = computed(() => ctx.value?.resolveCtx.breakpoint ?? "base");
 
 	return { resolved, locale, breakpoint };
 }

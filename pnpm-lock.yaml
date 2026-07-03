@@ -15,6 +15,34 @@ importers:
         specifier: ^2.9.18
         version: 2.9.18
 
+  apps/demos/vue:
+    dependencies:
+      '@kiv/editor':
+        specifier: workspace:*
+        version: link:../../../packages/editor
+      '@kiv/engine':
+        specifier: workspace:*
+        version: link:../../../packages/engine
+      '@kiv/nodes':
+        specifier: workspace:*
+        version: link:../../../packages/nodes
+      '@kiv/vue':
+        specifier: workspace:*
+        version: link:../../../packages/vue
+      vue:
+        specifier: ^3.5.17
+        version: 3.5.39(typescript@6.0.3)
+    devDependencies:
+      '@vitejs/plugin-vue':
+        specifier: ^5.2.4
+        version: 5.2.4(vite@6.4.3(jiti@2.7.0)(lightningcss@1.32.0))(vue@3.5.39(typescript@6.0.3))
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^6.3.5
+        version: 6.4.3(jiti@2.7.0)(lightningcss@1.32.0)
+
   packages/editor:
     dependencies:
       '@kiv/engine':

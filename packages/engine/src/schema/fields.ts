@@ -4,6 +4,7 @@ import type { FieldDescriptor } from "./field";
 interface BaseOptions<T> {
 	default?: T;
 	label?: string;
+	group?: string;
 	localizable?: boolean;
 	responsive?: boolean;
 }

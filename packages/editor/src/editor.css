@@ -1,0 +1,65 @@
+/* Kiv Editor — shared field control styles */
+.kiv-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.kiv-field__label {
+	font-size: 0.72rem;
+	font-weight: 600;
+	color: #6b7280;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+.kiv-field__input,
+.kiv-field__select,
+.kiv-field__textarea {
+	width: 100%;
+	padding: 5px 8px;
+	font-size: 0.82rem;
+	border: 1px solid #d1d5db;
+	border-radius: 4px;
+	background: #fff;
+	color: #111827;
+	outline: none;
+	transition: border-color 0.15s;
+	font-family: inherit;
+}
+.kiv-field__input:focus,
+.kiv-field__select:focus,
+.kiv-field__textarea:focus {
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+.kiv-field__textarea {
+	resize: vertical;
+}
+.kiv-field--boolean {
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
+}
+.kiv-field__checkbox {
+	width: 14px;
+	height: 14px;
+	cursor: pointer;
+	accent-color: #3b82f6;
+}
+.kiv-field--color .kiv-field__color-row {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+}
+.kiv-field--color .kiv-field__color-swatch {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 1px solid #d1d5db;
+	border-radius: 4px;
+	cursor: pointer;
+	background: none;
+	flex-shrink: 0;
+}
+.kiv-field--color .kiv-field__input {
+	flex: 1;
+}

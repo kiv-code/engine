@@ -31,8 +31,17 @@ const blurMap: Record<string, string> = {
 	lg: "16px",
 };
 
+const radiusMap: Record<string, string> = {
+	none: "0",
+	sm: "var(--kiv-radius-sm, 0.25rem)",
+	md: "var(--kiv-radius-md, 0.5rem)",
+	lg: "var(--kiv-radius-lg, 1rem)",
+	full: "var(--kiv-radius-full, 9999px)",
+};
+
 const sectionStyle = computed(() => {
 	const s: Record<string, string> = {};
+
 	if (props.background && props.background !== "transparent") {
 		s["background-color"] = props.background;
 	}
@@ -50,17 +59,38 @@ const sectionStyle = computed(() => {
 	if (props.opacity !== undefined && props.opacity !== 1) {
 		s.opacity = String(props.opacity);
 	}
+
+	// Spacing via tokens
+	if (props.paddingY && props.paddingY !== "none") {
+		s["padding-top"] = `var(--kiv-spacing-${props.paddingY})`;
+		s["padding-bottom"] = `var(--kiv-spacing-${props.paddingY})`;
+	}
+	if (props.paddingX && props.paddingX !== "none") {
+		s["padding-left"] = `var(--kiv-spacing-${props.paddingX})`;
+		s["padding-right"] = `var(--kiv-spacing-${props.paddingX})`;
+	}
+	if (props.marginY && props.marginY !== "none") {
+		s["margin-top"] = `var(--kiv-spacing-${props.marginY})`;
+		s["margin-bottom"] = `var(--kiv-spacing-${props.marginY})`;
+	}
+
+	// Border
 	if (props.borderWidth && props.borderWidth !== "0") {
 		s["border-width"] = `${props.borderWidth}px`;
 		s["border-style"] = "solid";
 		if (props.borderColor) s["border-color"] = props.borderColor;
 	}
+	if (props.borderRadius && props.borderRadius !== "none") {
+		s["border-radius"] = radiusMap[props.borderRadius] ?? props.borderRadius;
+	}
+
 	if (props.shadow && props.shadow !== "none") {
 		s["box-shadow"] = `var(--kiv-shadow-${props.shadow})`;
 	}
 	if (props.minHeight) {
 		s["min-height"] = props.minHeight;
 	}
+
 	return s;
 });
 </script>
@@ -68,11 +98,6 @@ const sectionStyle = computed(() => {
 <template>
 	<section
 		:style="sectionStyle"
-		:data-padding-y="paddingY"
-		:data-padding-x="paddingX"
-		:data-margin-y="marginY"
-		:data-radius="borderRadius"
-		:data-full-width="fullWidth"
 		data-kiv-type="section"
 		class="kiv-section"
 	>
