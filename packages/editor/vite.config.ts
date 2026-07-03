@@ -8,16 +8,14 @@ export default defineConfig({
 	build: {
 		lib: {
 			entry: resolve(__dirname, "src/index.ts"),
-			name: "KivVue",
+			name: "KivEditor",
 			fileName: (format) => `index.${format === "es" ? "mjs" : "cjs"}`,
 			formats: ["es"],
 		},
 		rollupOptions: {
-			external: ["vue", "@kiv/engine", "@kiv/nodes"],
+			external: ["vue", "@kiv/engine", "@kiv/nodes", "@kiv/vue"],
 			output: {
-				globals: {
-					vue: "Vue",
-				},
+				globals: { vue: "Vue" },
 			},
 		},
 	},
