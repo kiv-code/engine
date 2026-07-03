@@ -4,6 +4,6 @@ export const pageNode = defineNode({
 	type: "page",
 	category: "layout",
 	fields: {
-		lang: f.text({ label: "Language", default: "en" }),
+		lang: f.text({ label: "Language", default: "en", group: "General" }),
 	},
 });

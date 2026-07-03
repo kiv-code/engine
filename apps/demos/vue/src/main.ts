@@ -1,0 +1,6 @@
+import "@kiv/editor/style";
+import "@kiv/vue/style";
+import { createApp } from "vue";
+import App from "./App.vue";
+
+createApp(App).mount("#app");

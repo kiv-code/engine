@@ -8,22 +8,26 @@ export const stackNode = defineNode({
 			label: "Direction",
 			default: "vertical",
 			responsive: true,
+			group: "Layout",
 		}),
 		gap: f.select(["none", "sm", "md", "lg", "xl"], {
 			label: "Gap",
 			default: "md",
 			responsive: true,
+			group: "Layout",
 		}),
 		align: f.select(["start", "center", "end", "stretch"], {
 			label: "Align items",
 			default: "start",
 			responsive: true,
+			group: "Layout",
 		}),
 		justify: f.select(["start", "center", "end", "between", "around"], {
 			label: "Justify content",
 			default: "start",
 			responsive: true,
+			group: "Layout",
 		}),
-		wrap: f.boolean({ label: "Wrap", default: false }),
+		wrap: f.boolean({ label: "Wrap", default: false, group: "Layout" }),
 	},
 });

@@ -8,11 +8,13 @@ export const gridNode = defineNode({
 			label: "Columns",
 			default: "12",
 			responsive: true,
+			group: "Layout",
 		}),
 		gap: f.select(["none", "sm", "md", "lg", "xl"], {
 			label: "Gap",
 			default: "md",
 			responsive: true,
+			group: "Layout",
 		}),
 	},
 });

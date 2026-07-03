@@ -19,6 +19,8 @@ export interface FieldDescriptor<T = unknown> {
 	default?: T;
 	/** Etiqueta visible en el inspector. */
 	label?: string;
+	/** Grupo/sección en el inspector (e.g. "Layout", "Typography", "Background"). */
+	group?: string;
 	/** Si true, el valor puede traducirse por locale. */
 	localizable?: boolean;
 	/** Si true, el valor puede variar por breakpoint. */

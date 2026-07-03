@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { KivDocument, Registry } from "@kiv/engine";
+import type { Breakpoint, KivDocument, Registry } from "@kiv/engine";
 import type { VueRegistry } from "@kiv/vue";
 import { provide, watch } from "vue";
 import { EDITOR_STORE_KEY } from "../store/context";
@@ -24,25 +24,52 @@ watch(
 	(doc) => emit("update:document", doc),
 	{ deep: true },
 );
+
+const BREAKPOINTS: { value: Breakpoint; label: string; icon: string }[] = [
+	{ value: "base", label: "Mobile", icon: "📱" },
+	{ value: "md", label: "Tablet", icon: "📟" },
+	{ value: "lg", label: "Desktop", icon: "🖥" },
+	{ value: "xl", label: "Wide", icon: "⬛" },
+];
 </script>
 
 <template>
 	<div class="kiv-editor">
 		<header class="kiv-editor__toolbar">
-			<button
-				type="button"
-				:disabled="!store.canUndo.value"
-				@click="store.undo()"
-			>
-				Undo
-			</button>
-			<button
-				type="button"
-				:disabled="!store.canRedo.value"
-				@click="store.redo()"
-			>
-				Redo
-			</button>
+			<div class="kiv-editor__toolbar-group">
+				<button
+					type="button"
+					class="kiv-toolbar-btn"
+					:disabled="!store.canUndo.value"
+					@click="store.undo()"
+					title="Undo"
+				>
+					↩ Undo
+				</button>
+				<button
+					type="button"
+					class="kiv-toolbar-btn"
+					:disabled="!store.canRedo.value"
+					@click="store.redo()"
+					title="Redo"
+				>
+					↪ Redo
+				</button>
+			</div>
+			<div class="kiv-editor__breakpoints">
+				<button
+					v-for="bp in BREAKPOINTS"
+					:key="bp.value"
+					type="button"
+					class="kiv-bp-btn"
+					:class="{ 'kiv-bp-btn--active': store.breakpoint.value === bp.value }"
+					:title="bp.label"
+					@click="store.setBreakpoint(bp.value)"
+				>
+					<span class="kiv-bp-btn__icon">{{ bp.icon }}</span>
+					<span class="kiv-bp-btn__label">{{ bp.label }}</span>
+				</button>
+			</div>
 		</header>
 		<div class="kiv-editor__body">
 			<KivTree />
@@ -62,22 +89,71 @@ watch(
 }
 .kiv-editor__toolbar {
 	display: flex;
-	gap: 8px;
-	padding: 8px 12px;
+	align-items: center;
+	justify-content: space-between;
+	padding: 6px 12px;
 	border-bottom: 1px solid #e5e7eb;
 	background: #fff;
+	gap: 12px;
 }
-.kiv-editor__toolbar button {
+.kiv-editor__toolbar-group {
+	display: flex;
+	gap: 4px;
+}
+.kiv-toolbar-btn {
 	padding: 4px 10px;
 	border: 1px solid #d1d5db;
 	border-radius: 4px;
 	background: #fff;
 	cursor: pointer;
-	font-size: 0.8rem;
+	font-size: 0.78rem;
+	color: #374151;
+	display: flex;
+	align-items: center;
+	gap: 4px;
 }
-.kiv-editor__toolbar button:disabled {
+.kiv-toolbar-btn:hover:not(:disabled) {
+	background: #f3f4f6;
+}
+.kiv-toolbar-btn:disabled {
 	opacity: 0.4;
 	cursor: default;
+}
+.kiv-editor__breakpoints {
+	display: flex;
+	gap: 2px;
+	background: #f3f4f6;
+	border-radius: 6px;
+	padding: 2px;
+}
+.kiv-bp-btn {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 10px;
+	border: none;
+	border-radius: 4px;
+	background: transparent;
+	cursor: pointer;
+	font-size: 0.75rem;
+	color: #6b7280;
+	transition: background 0.1s, color 0.1s;
+}
+.kiv-bp-btn:hover {
+	background: #e5e7eb;
+	color: #374151;
+}
+.kiv-bp-btn--active {
+	background: #fff;
+	color: #1d4ed8;
+	font-weight: 600;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.kiv-bp-btn__icon {
+	font-size: 0.9rem;
+}
+.kiv-bp-btn__label {
+	font-size: 0.72rem;
 }
 .kiv-editor__body {
 	display: flex;

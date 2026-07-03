@@ -1,4 +1,4 @@
-import type { KivDocument, KivNode, Registry } from "@kiv/engine";
+import type { Breakpoint, KivDocument, KivNode, Registry } from "@kiv/engine";
 import { computed, ref } from "vue";
 import {
 	addNode,
@@ -15,7 +15,9 @@ export interface EditorStore {
 	selected: Readonly<{ value: KivNode | null }>;
 	canUndo: Readonly<{ value: boolean }>;
 	canRedo: Readonly<{ value: boolean }>;
+	breakpoint: Readonly<{ value: Breakpoint }>;
 	select(id: string | null): void;
+	setBreakpoint(bp: Breakpoint): void;
 	updateProps(id: string, patch: Record<string, unknown>): void;
 	addNode(
 		parentId: string,
@@ -42,6 +44,7 @@ export function useEditorStore(
 	const present = ref<KivDocument>(cloneDocument(initialDocument));
 	const future = ref<KivDocument[]>([]);
 	const selectedId = ref<string | null>(null);
+	const breakpoint = ref<Breakpoint>("base");
 
 	function commit(next: KivDocument) {
 		past.value = [
@@ -72,6 +75,10 @@ export function useEditorStore(
 
 	function select(id: string | null) {
 		selectedId.value = id;
+	}
+
+	function setBreakpoint(bp: Breakpoint) {
+		breakpoint.value = bp;
 	}
 
 	function updateProps(id: string, patch: Record<string, unknown>) {
@@ -130,7 +137,9 @@ export function useEditorStore(
 		selected,
 		canUndo,
 		canRedo,
+		breakpoint,
 		select,
+		setBreakpoint,
 		updateProps,
 		addNode: add,
 		removeNode: remove,

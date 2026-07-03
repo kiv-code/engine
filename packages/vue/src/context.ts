@@ -1,5 +1,5 @@
 import type { ResolveContext } from "@kiv/engine";
-import type { InjectionKey } from "vue";
+import type { ComputedRef, InjectionKey } from "vue";
 import type { VueRegistry } from "./registry";
 
 export interface KivRenderContext {
@@ -7,5 +7,7 @@ export interface KivRenderContext {
 	resolveCtx: ResolveContext;
 }
 
-export const KIV_CONTEXT_KEY: InjectionKey<KivRenderContext> =
-	Symbol("kiv-render-context");
+// Supports both direct value (legacy) and ComputedRef (reactive, from KivRenderer)
+export const KIV_CONTEXT_KEY: InjectionKey<
+	KivRenderContext | ComputedRef<KivRenderContext>
+> = Symbol("kiv-render-context");
