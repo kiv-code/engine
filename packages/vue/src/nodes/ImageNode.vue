@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { RADIUS, SHADOW } from "@kiv/nodes";
 import { computed } from "vue";
 
 const props = defineProps<{
@@ -6,21 +7,22 @@ const props = defineProps<{
 	alt?: string;
 	fit?: string;
 	aspectRatio?: string;
+	width?: string;
+	borderRadius?: string;
+	shadow?: string;
 }>();
 
 const imageStyle = computed(() => ({
-	"object-fit": (props.fit as "cover" | "contain" | "fill" | "none") ?? "cover",
-	"aspect-ratio": props.aspectRatio !== "auto" ? props.aspectRatio : undefined,
-	width: "100%",
+	objectFit: (props.fit ?? "cover") as "cover" | "contain" | "fill" | "none",
+	aspectRatio: props.aspectRatio !== "auto" ? props.aspectRatio : undefined,
+	width: props.width ?? "100%",
+	maxWidth: "100%",
 	display: "block",
+	borderRadius: RADIUS[props.borderRadius ?? "none"] ?? "0",
+	boxShadow: SHADOW[props.shadow ?? "none"] ?? "none",
 }));
 </script>
 
 <template>
-	<img
-		:src="src"
-		:alt="alt ?? ''"
-		:style="imageStyle"
-		data-kiv-type="image"
-	/>
+	<img :src="src" :alt="alt ?? ''" :style="imageStyle" data-kiv-type="image" />
 </template>

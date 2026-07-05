@@ -1,27 +1,23 @@
 <script setup lang="ts">
+import { MAX_WIDTH, SPACING } from "@kiv/nodes";
 import { computed } from "vue";
 
 const props = defineProps<{
 	maxWidth?: string;
 	paddingX?: string;
+	paddingY?: string;
 	centered?: boolean;
 }>();
 
-const maxWidthMap: Record<string, string> = {
-	sm: "640px",
-	md: "768px",
-	lg: "1024px",
-	xl: "1280px",
-	"2xl": "1536px",
-	full: "100%",
-};
-
 const containerStyle = computed(() => ({
-	"max-width": maxWidthMap[props.maxWidth ?? "lg"] ?? "1024px",
-	"margin-left": props.centered !== false ? "auto" : undefined,
-	"margin-right": props.centered !== false ? "auto" : undefined,
-	"padding-left": `var(--kiv-spacing-${props.paddingX ?? "md"})`,
-	"padding-right": `var(--kiv-spacing-${props.paddingX ?? "md"})`,
+	maxWidth: MAX_WIDTH[props.maxWidth ?? "lg"] ?? "1024px",
+	marginLeft: props.centered !== false ? "auto" : undefined,
+	marginRight: props.centered !== false ? "auto" : undefined,
+	paddingLeft: SPACING[props.paddingX ?? "md"] ?? "16px",
+	paddingRight: SPACING[props.paddingX ?? "md"] ?? "16px",
+	paddingTop: SPACING[props.paddingY ?? "none"] ?? "0",
+	paddingBottom: SPACING[props.paddingY ?? "none"] ?? "0",
+	width: "100%",
 }));
 </script>
 

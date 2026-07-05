@@ -8,6 +8,7 @@ export {
 	stackNode,
 } from "./layout";
 export { imageNode } from "./media";
+export * from "./scales";
 
 import { buttonNode } from "./content/button";
 import { headingNode } from "./content/heading";

@@ -57,7 +57,7 @@ describe("layout nodes", () => {
 
 	it("stack: type and default direction", () => {
 		expect(stackNode.type).toBe("stack");
-		expect(stackNode.defaults.direction).toBe("vertical");
+		expect(stackNode.defaults.direction).toBe("column");
 		expect(stackNode.defaults.wrap).toBe(false);
 	});
 

@@ -1,57 +1,44 @@
 <script setup lang="ts">
+import { GAP, RADIUS, SHADOW, SPACING } from "@kiv/nodes";
 import { computed } from "vue";
 
 const props = defineProps<{
-	direction?: string; // "vertical" | "horizontal"
+	direction?: string;
 	gap?: string;
 	align?: string;
 	justify?: string;
 	wrap?: boolean;
-	// Responsive: collapse horizontal stacks to vertical on mobile
-	smDirection?: string;
-	mdDirection?: string;
+	paddingY?: string;
+	paddingX?: string;
+	background?: string;
+	borderRadius?: string;
+	shadow?: string;
 }>();
 
 const stackStyle = computed(() => ({
 	display: "flex" as const,
-	gap: `var(--kiv-spacing-${props.gap ?? "md"})`,
-	alignItems: props.align ?? "stretch",
+	flexDirection: (props.direction === "row" ? "row" : "column") as
+		| "row"
+		| "column",
+	gap: GAP[props.gap ?? "md"] ?? "16px",
+	alignItems: props.align ?? "flex-start",
 	justifyContent: props.justify ?? "flex-start",
 	flexWrap: (props.wrap ? "wrap" : "nowrap") as "wrap" | "nowrap",
-	"--kiv-stack-dir": props.direction === "horizontal" ? "row" : "column",
-	"--kiv-stack-dir-sm":
-		props.smDirection === "horizontal"
-			? "row"
-			: props.smDirection === "vertical"
-				? "column"
-				: "var(--kiv-stack-dir)",
-	"--kiv-stack-dir-md":
-		props.mdDirection === "horizontal"
-			? "row"
-			: props.mdDirection === "vertical"
-				? "column"
-				: "var(--kiv-stack-dir-sm)",
+	paddingTop: SPACING[props.paddingY ?? "none"] ?? "0",
+	paddingBottom: SPACING[props.paddingY ?? "none"] ?? "0",
+	paddingLeft: SPACING[props.paddingX ?? "none"] ?? "0",
+	paddingRight: SPACING[props.paddingX ?? "none"] ?? "0",
+	background:
+		props.background && props.background !== "transparent"
+			? props.background
+			: undefined,
+	borderRadius: RADIUS[props.borderRadius ?? "none"] ?? "0",
+	boxShadow: SHADOW[props.shadow ?? "none"] ?? "none",
 }));
 </script>
 
 <template>
-	<div class="kiv-stack" :style="stackStyle" data-kiv-type="stack">
+	<div :style="stackStyle" data-kiv-type="stack">
 		<slot />
 	</div>
 </template>
-
-<style>
-.kiv-stack {
-	flex-direction: var(--kiv-stack-dir, column);
-}
-@media (min-width: 640px) {
-	.kiv-stack {
-		flex-direction: var(--kiv-stack-dir-sm, var(--kiv-stack-dir, column));
-	}
-}
-@media (min-width: 768px) {
-	.kiv-stack {
-		flex-direction: var(--kiv-stack-dir-md, var(--kiv-stack-dir-sm, var(--kiv-stack-dir, column)));
-	}
-}
-</style>

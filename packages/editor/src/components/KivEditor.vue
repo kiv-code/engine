@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { Breakpoint, KivDocument, KivNode, Registry } from "@kiv/engine";
 import type { VueRegistry } from "@kiv/vue";
-import { provide, ref, watch } from "vue";
+import { computed, provide, ref, watch } from "vue";
 import { EDITOR_STORE_KEY } from "../store/context";
 import { useEditorStore } from "../store/editor-store";
+import { getNodeLabel } from "../utils/node-labels";
 import KivCanvas from "./KivCanvas.vue";
 import KivInspector from "./KivInspector.vue";
 import KivNodePalette from "./KivNodePalette.vue";
@@ -32,6 +33,21 @@ const treeOpen = ref(true);
 const inspectorOpen = ref(true);
 const paletteOpen = ref(false);
 
+// Editor chrome theme — initialized from prop, toggleable at runtime
+const editorTheme = ref<"dark" | "light">(props.theme ?? "dark");
+function toggleTheme() {
+	editorTheme.value = editorTheme.value === "dark" ? "light" : "dark";
+}
+
+// Locales available in the document (for the toolbar switcher)
+const locales = computed<string[]>(
+	() => store.document.value.i18n?.supported ?? [],
+);
+const hasMultipleLocales = computed(() => locales.value.length > 1);
+function localeLabel(loc: string) {
+	return loc.toUpperCase();
+}
+
 function openPalette() {
 	paletteOpen.value = true;
 }
@@ -39,47 +55,51 @@ function closePalette() {
 	paletteOpen.value = false;
 }
 
-function onPaletteAdd(node: KivNode, position: "inside" | "after") {
+function findParentLoc(
+	current: KivNode,
+	targetId: string,
+): { parent: KivNode; slot: string; index: number } | null {
+	for (const [slot, children] of Object.entries(current.slots ?? {})) {
+		for (let i = 0; i < children.length; i++) {
+			const child = children[i];
+			if (!child) continue;
+			if (child.id === targetId) return { parent: current, slot, index: i };
+			const found = findParentLoc(child, targetId);
+			if (found) return found;
+		}
+	}
+	return null;
+}
+
+// Smart insert: if selected has slots → append inside as last child.
+// If selected is a leaf (no slots) → insert after it in its parent.
+// No selection → append to root's first slot.
+function onPaletteAdd(node: KivNode) {
 	if (!store) return;
 	const selected = store.selected.value;
 	const doc = store.document.value;
 
-	if (position === "inside") {
-		const parent = selected ?? doc.root;
-		const slots = Object.keys(parent.slots ?? {});
-		const slotName = slots[0] ?? "default";
-		store.addNode(parent.id, slotName, node);
-	} else {
-		// after: find parent of selected, insert right after selected's index
-		if (!selected) {
-			// no selection → append to root's first slot
-			const slots = Object.keys(doc.root.slots ?? {});
-			store.addNode(doc.root.id, slots[0] ?? "default", node);
+	if (selected) {
+		const slots = Object.keys(selected.slots ?? {});
+		if (slots.length > 0) {
+			// Has slots — append as last child
+			const slotName = slots[0] ?? "default";
+			const children = selected.slots?.[slotName] ?? [];
+			store.addNode(selected.id, slotName, node, children.length);
 		} else {
-			// find selected's parent via DFS
-			function findParent(
-				current: KivNode,
-				targetId: string,
-			): { parent: KivNode; slot: string; index: number } | null {
-				for (const [slot, children] of Object.entries(current.slots ?? {})) {
-					for (let i = 0; i < children.length; i++) {
-						const child = children[i];
-						if (!child) continue;
-						if (child.id === targetId)
-							return { parent: current, slot, index: i };
-						const found = findParent(child, targetId);
-						if (found) return found;
-					}
-				}
-				return null;
-			}
-			const loc = findParent(doc.root, selected.id);
+			// Leaf — insert after in parent
+			const loc = findParentLoc(doc.root, selected.id);
 			if (loc) {
 				store.addNode(loc.parent.id, loc.slot, node, loc.index + 1);
 			} else {
-				store.addNode(doc.root.id, "default", node);
+				const slotName = Object.keys(doc.root.slots ?? {})[0] ?? "default";
+				store.addNode(doc.root.id, slotName, node);
 			}
 		}
+	} else {
+		const slotName = Object.keys(doc.root.slots ?? {})[0] ?? "default";
+		const children = doc.root.slots?.[slotName] ?? [];
+		store.addNode(doc.root.id, slotName, node, children.length);
 	}
 
 	store.select(node.id);
@@ -101,7 +121,7 @@ const BREAKPOINTS: BpDef[] = [
 </script>
 
 <template>
-	<div class="kiv-editor" :class="props.theme === 'light' ? 'kiv-editor--light' : 'kiv-editor--dark'">
+	<div class="kiv-editor" :class="editorTheme === 'light' ? 'kiv-editor--light' : 'kiv-editor--dark'">
 		<!-- Toolbar -->
 		<header class="kiv-editor__toolbar">
 			<div class="kiv-toolbar__left">
@@ -141,6 +161,25 @@ const BREAKPOINTS: BpDef[] = [
 						<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>
 					</svg>
 				</button>
+
+				<!-- Locale switcher (only when doc supports more than one) -->
+				<template v-if="hasMultipleLocales">
+					<div class="kiv-toolbar__sep" />
+					<div class="kiv-locale-switcher" title="Preview locale">
+						<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<circle cx="12" cy="12" r="9"/>
+							<path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>
+						</svg>
+						<button
+							v-for="loc in locales"
+							:key="loc"
+							type="button"
+							class="kiv-locale-btn"
+							:class="{ 'kiv-locale-btn--active': store.locale.value === loc }"
+							@click="store.setLocale(loc)"
+						>{{ localeLabel(loc) }}</button>
+					</div>
+				</template>
 			</div>
 
 			<div class="kiv-toolbar__center">
@@ -175,6 +214,21 @@ const BREAKPOINTS: BpDef[] = [
 				<div class="kiv-toolbar__sep" />
 				<button
 					type="button"
+					class="kiv-toolbar__action"
+					:title="editorTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+					@click="toggleTheme"
+				>
+					<svg v-if="editorTheme === 'dark'" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<circle cx="12" cy="12" r="4"/>
+						<path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+					</svg>
+					<svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>
+					</svg>
+				</button>
+				<div class="kiv-toolbar__sep" />
+				<button
+					type="button"
 					class="kiv-toolbar__panel-toggle"
 					:class="{ active: inspectorOpen }"
 					title="Toggle inspector"
@@ -203,6 +257,9 @@ const BREAKPOINTS: BpDef[] = [
 		<KivNodePalette
 			:open="paletteOpen"
 			:selected-node-type="store.selected.value?.type"
+			:selected-node-label="store.selected.value ? getNodeLabel(store.selected.value.type) : undefined"
+			:registry="registry"
+			:theme="editorTheme"
 			@close="closePalette"
 			@add="onPaletteAdd"
 		/>
@@ -216,8 +273,8 @@ const BREAKPOINTS: BpDef[] = [
 	height: 100%;
 	font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
 	font-size: 13px;
-	background: #0f1117;
-	color: #e2e8f0;
+	background: var(--color-surface-base);
+	color: var(--color-text-primary);
 }
 
 /* ── Toolbar ── */
@@ -227,8 +284,8 @@ const BREAKPOINTS: BpDef[] = [
 	align-items: center;
 	padding: 0 10px;
 	height: 44px;
-	background: #16181f;
-	border-bottom: 1px solid #1e2130;
+	background: var(--color-surface-raised);
+	border-bottom: 1px solid var(--color-border);
 	flex-shrink: 0;
 	gap: 8px;
 }
@@ -250,7 +307,7 @@ const BREAKPOINTS: BpDef[] = [
 .kiv-toolbar__sep {
 	width: 1px;
 	height: 20px;
-	background: #2d3148;
+	background: var(--color-border);
 	margin: 0 4px;
 }
 
@@ -317,8 +374,8 @@ const BREAKPOINTS: BpDef[] = [
 .kiv-bp-switcher {
 	display: flex;
 	gap: 1px;
-	background: #1a1d2a;
-	border: 1px solid #1e2130;
+	background: var(--color-surface-overlay);
+	border: 1px solid var(--color-border);
 	border-radius: 8px;
 	padding: 2px;
 }
@@ -348,6 +405,36 @@ const BREAKPOINTS: BpDef[] = [
 }
 .kiv-bp-btn__icon { font-size: 0.8rem; }
 .kiv-bp-btn__label { font-size: 0.72rem; }
+
+/* ── Locale switcher ── */
+.kiv-locale-switcher {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding: 2px 2px 2px 6px;
+	background: var(--color-surface-overlay);
+	border: 1px solid var(--color-border);
+	border-radius: 7px;
+	color: var(--color-text-muted);
+}
+.kiv-locale-btn {
+	padding: 3px 7px;
+	border: none;
+	border-radius: 5px;
+	background: transparent;
+	color: var(--color-text-secondary);
+	cursor: pointer;
+	font-size: 0.68rem;
+	font-weight: 600;
+	font-family: inherit;
+	letter-spacing: 0.03em;
+	transition: background 0.1s, color 0.1s;
+}
+.kiv-locale-btn:hover { color: var(--color-text-primary); }
+.kiv-locale-btn--active {
+	background: var(--color-accent-muted);
+	color: var(--color-accent-light);
+}
 
 /* ── Body ── */
 .kiv-editor__body {

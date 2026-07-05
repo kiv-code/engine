@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { BLUR, RADIUS, SECTION_SPACING, SHADOW } from "@kiv/nodes";
 import { computed } from "vue";
 
 const props = defineProps<{
@@ -22,96 +23,62 @@ const props = defineProps<{
 	shadow?: string;
 	fullWidth?: boolean;
 	minHeight?: string;
+	alignItems?: string;
+	justifyContent?: string;
 }>();
-
-const BLUR_MAP: Record<string, string> = {
-	none: "0",
-	sm: "4px",
-	md: "8px",
-	lg: "16px",
-};
-
-const RADIUS_MAP: Record<string, string> = {
-	none: "0",
-	sm: "4px",
-	md: "8px",
-	lg: "16px",
-	full: "9999px",
-};
-
-const SHADOW_MAP: Record<string, string> = {
-	none: "none",
-	sm: "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)",
-	md: "0 4px 16px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.1)",
-	lg: "0 10px 40px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.12)",
-};
-
-const SPACING_MAP: Record<string, string> = {
-	none: "0",
-	sm: "16px",
-	md: "32px",
-	lg: "64px",
-	xl: "96px",
-};
 
 const sectionStyle = computed(() => {
 	const s: Record<string, string> = {};
 
 	if (props.background && props.background !== "transparent") {
-		s["background-color"] = props.background;
+		s.backgroundColor = props.background;
 	}
 	if (props.backgroundImage) {
-		s["background-image"] = `url(${props.backgroundImage})`;
-		s["background-size"] = props.backgroundSize ?? "cover";
-		s["background-position"] = props.backgroundPosition ?? "center";
+		s.backgroundImage = `url(${props.backgroundImage})`;
+		s.backgroundSize = props.backgroundSize ?? "cover";
+		s.backgroundPosition = props.backgroundPosition ?? "center";
 	}
 	if (props.gradient) {
-		s["background-image"] = props.gradient;
+		s.backgroundImage = props.gradient;
 	}
 	if (props.opacity !== undefined && props.opacity !== 1) {
 		s.opacity = String(props.opacity);
 	}
-
-	// Spacing — real px values, no tokens
 	if (props.paddingY && props.paddingY !== "none") {
-		const v = SPACING_MAP[props.paddingY] ?? props.paddingY;
-		s["padding-top"] = v;
-		s["padding-bottom"] = v;
+		const v = SECTION_SPACING[props.paddingY] ?? props.paddingY;
+		s.paddingTop = v;
+		s.paddingBottom = v;
 	}
 	if (props.paddingX && props.paddingX !== "none") {
-		const v = SPACING_MAP[props.paddingX] ?? props.paddingX;
-		s["padding-left"] = v;
-		s["padding-right"] = v;
+		const v = SECTION_SPACING[props.paddingX] ?? props.paddingX;
+		s.paddingLeft = v;
+		s.paddingRight = v;
 	}
 	if (props.marginY && props.marginY !== "none") {
-		const v = SPACING_MAP[props.marginY] ?? props.marginY;
-		s["margin-top"] = v;
-		s["margin-bottom"] = v;
+		const v = SECTION_SPACING[props.marginY] ?? props.marginY;
+		s.marginTop = v;
+		s.marginBottom = v;
 	}
-
-	// Border
 	if (props.borderWidth && props.borderWidth !== "0") {
-		s["border-width"] = `${props.borderWidth}px`;
-		s["border-style"] = "solid";
-		if (props.borderColor) s["border-color"] = props.borderColor;
+		s.borderWidth = `${props.borderWidth}px`;
+		s.borderStyle = "solid";
+		if (props.borderColor) s.borderColor = props.borderColor;
 	}
 	if (props.borderRadius && props.borderRadius !== "none") {
-		s["border-radius"] = RADIUS_MAP[props.borderRadius] ?? props.borderRadius;
+		s.borderRadius = RADIUS[props.borderRadius] ?? props.borderRadius;
 	}
-
 	if (props.shadow && props.shadow !== "none") {
-		s["box-shadow"] = SHADOW_MAP[props.shadow] ?? props.shadow;
+		s.boxShadow = SHADOW[props.shadow] ?? props.shadow;
 	}
 	if (props.minHeight) {
-		s["min-height"] = props.minHeight;
+		s.minHeight = props.minHeight;
 	}
 
 	return s;
 });
 
-// Blur applies to the background layer pseudo-element via a separate div
 const bgBlurStyle = computed(() => {
-	const amount = BLUR_MAP[props.blur ?? "none"] ?? "0";
+	const amount = BLUR[props.blur ?? "none"] ?? "0";
 	if (amount === "0") return null;
 	return {
 		position: "absolute" as const,
@@ -121,30 +88,31 @@ const bgBlurStyle = computed(() => {
 		zIndex: "0",
 	};
 });
+
+const contentStyle = computed(() => ({
+	alignItems:
+		props.alignItems && props.alignItems !== "flex-start"
+			? props.alignItems
+			: undefined,
+	justifyContent:
+		props.justifyContent && props.justifyContent !== "flex-start"
+			? props.justifyContent
+			: undefined,
+}));
 </script>
 
 <template>
-	<section
-		:style="sectionStyle"
-		data-kiv-type="section"
-		class="kiv-section"
-	>
-		<!-- Background video -->
+	<section :style="sectionStyle" data-kiv-type="section" class="kiv-section">
 		<div v-if="backgroundVideo" class="kiv-section__video-bg">
 			<video autoplay muted loop playsinline :src="backgroundVideo" />
 		</div>
-		<!-- Backdrop blur layer (sits above bg, below content) -->
 		<div v-if="bgBlurStyle" :style="bgBlurStyle" />
-		<!-- Overlay -->
 		<div
 			v-if="overlay"
 			class="kiv-section__overlay"
-			:style="{
-				background: overlayColor ?? 'rgba(0,0,0,0.4)',
-				opacity: String(overlayOpacity ?? 0.4),
-			}"
+			:style="{ background: overlayColor ?? 'rgba(0,0,0,0.4)', opacity: String(overlayOpacity ?? 0.4) }"
 		/>
-		<div class="kiv-section__content">
+		<div class="kiv-section__content" :style="contentStyle">
 			<slot />
 		</div>
 	</section>
@@ -154,6 +122,8 @@ const bgBlurStyle = computed(() => {
 .kiv-section {
 	position: relative;
 	width: 100%;
+	display: flex;
+	flex-direction: column;
 }
 .kiv-section__overlay {
 	position: absolute;
@@ -174,5 +144,9 @@ const bgBlurStyle = computed(() => {
 .kiv-section__content {
 	position: relative;
 	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	flex: 1;
 }
 </style>

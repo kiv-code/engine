@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FieldDescriptor } from "@kiv/engine";
+import type { Breakpoint, FieldDescriptor } from "@kiv/engine";
 import BooleanControl from "./controls/BooleanControl.vue";
 import ColorControl from "./controls/ColorControl.vue";
 import NumberControl from "./controls/NumberControl.vue";
@@ -11,6 +11,8 @@ const props = defineProps<{
 	fieldKey: string;
 	descriptor: FieldDescriptor;
 	modelValue: unknown;
+	breakpoint?: Breakpoint;
+	locale?: string;
 }>();
 
 const emit = defineEmits<{ "update:modelValue": [value: unknown] }>();
@@ -19,44 +21,111 @@ const label = props.descriptor.label ?? props.fieldKey;
 
 const selectOptions =
 	props.descriptor.options?.map((o) => String(o.value)) ?? [];
+
+const BP_SHORT: Record<string, string> = {
+	base: "",
+	sm: "SM",
+	md: "MD",
+	lg: "LG",
+	xl: "XL",
+};
+const bpBadge =
+	props.descriptor.responsive && props.breakpoint && props.breakpoint !== "base"
+		? (BP_SHORT[props.breakpoint] ?? "")
+		: "";
+const localeBadge = props.locale ? props.locale.toUpperCase() : "";
 </script>
 
 <template>
-	<BooleanControl
-		v-if="descriptor.control === 'boolean'"
-		:label="label"
-		:model-value="(modelValue as boolean | undefined)"
-		@update:model-value="emit('update:modelValue', $event)"
-	/>
-	<ColorControl
-		v-else-if="descriptor.control === 'color'"
-		:label="label"
-		:model-value="(modelValue as string | undefined)"
-		@update:model-value="emit('update:modelValue', $event)"
-	/>
-	<SelectControl
-		v-else-if="descriptor.control === 'select'"
-		:label="label"
-		:model-value="(modelValue as string | undefined)"
-		:options="selectOptions"
-		@update:model-value="emit('update:modelValue', $event)"
-	/>
-	<NumberControl
-		v-else-if="descriptor.control === 'number'"
-		:label="label"
-		:model-value="(modelValue as number | undefined)"
-		@update:model-value="emit('update:modelValue', $event)"
-	/>
-	<TextareaControl
-		v-else-if="descriptor.control === 'textarea'"
-		:label="label"
-		:model-value="(modelValue as string | undefined)"
-		@update:model-value="emit('update:modelValue', $event)"
-	/>
-	<TextControl
-		v-else
-		:label="label"
-		:model-value="(modelValue as string | undefined)"
-		@update:model-value="emit('update:modelValue', $event)"
-	/>
+	<div class="kiv-field">
+		<!-- Label row: label on left, badges on right (never overlaps the control) -->
+		<div v-if="descriptor.control !== 'boolean'" class="kiv-field__label-row">
+			<span class="kiv-field__label">{{ label }}</span>
+			<span class="kiv-field__badges">
+				<span v-if="localeBadge" class="kiv-field__locale-badge">{{ localeBadge }}</span>
+				<span v-if="bpBadge" class="kiv-field__bp-badge">{{ bpBadge }}</span>
+			</span>
+		</div>
+		<!-- For boolean we pass the badge separately so BooleanControl can show it inline -->
+		<BooleanControl
+			v-if="descriptor.control === 'boolean'"
+			:label="label"
+			:bp-badge="bpBadge"
+			:model-value="(modelValue as boolean | undefined)"
+			@update:model-value="emit('update:modelValue', $event)"
+		/>
+		<ColorControl
+			v-else-if="descriptor.control === 'color'"
+			:model-value="(modelValue as string | undefined)"
+			@update:model-value="emit('update:modelValue', $event)"
+		/>
+		<SelectControl
+			v-else-if="descriptor.control === 'select'"
+			:model-value="(modelValue as string | undefined)"
+			:options="selectOptions"
+			@update:model-value="emit('update:modelValue', $event)"
+		/>
+		<NumberControl
+			v-else-if="descriptor.control === 'number'"
+			:model-value="(modelValue as number | undefined)"
+			@update:model-value="emit('update:modelValue', $event)"
+		/>
+		<TextareaControl
+			v-else-if="descriptor.control === 'textarea'"
+			:model-value="(modelValue as string | undefined)"
+			@update:model-value="emit('update:modelValue', $event)"
+		/>
+		<TextControl
+			v-else
+			:model-value="(modelValue as string | undefined)"
+			@update:model-value="emit('update:modelValue', $event)"
+		/>
+	</div>
 </template>
+
+<style scoped>
+.kiv-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.kiv-field__label-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+}
+.kiv-field__label {
+	font-size: 0.65rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.07em;
+	color: var(--color-text-secondary);
+}
+.kiv-field__badges {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex-shrink: 0;
+}
+.kiv-field__bp-badge {
+	font-size: 0.55rem;
+	font-weight: 700;
+	padding: 1px 5px;
+	border-radius: 3px;
+	background: var(--color-accent-muted);
+	color: var(--color-accent-light);
+	letter-spacing: 0.04em;
+	flex-shrink: 0;
+}
+.kiv-field__locale-badge {
+	font-size: 0.55rem;
+	font-weight: 700;
+	padding: 1px 5px;
+	border-radius: 3px;
+	background: rgba(52, 211, 153, 0.16);
+	color: #6ee7b7;
+	letter-spacing: 0.04em;
+	flex-shrink: 0;
+}
+</style>

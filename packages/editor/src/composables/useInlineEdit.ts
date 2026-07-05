@@ -1,3 +1,4 @@
+import type { KivNode } from "@kiv/engine";
 import type { EditorStore } from "../store/editor-store";
 
 /** Nodes that support inline text editing and the prop they write to. */
@@ -6,6 +7,27 @@ const INLINE_FIELDS: Record<string, string> = {
 	text: "content",
 	button: "label",
 };
+
+// All INLINE_FIELDS are localizable content props.
+function isLocalized(v: unknown): v is { $t: Record<string, unknown> } {
+	return (
+		typeof v === "object" &&
+		v !== null &&
+		!Array.isArray(v) &&
+		"$t" in (v as Record<string, unknown>)
+	);
+}
+
+function findNode(node: KivNode, id: string): KivNode | null {
+	if (node.id === id) return node;
+	for (const children of Object.values(node.slots ?? {})) {
+		for (const child of children) {
+			const found = findNode(child, id);
+			if (found) return found;
+		}
+	}
+	return null;
+}
 
 interface Handlers {
 	blur: EventListener;
@@ -28,7 +50,21 @@ export function useInlineEdit(store: EditorStore) {
 	function commit(el: HTMLElement, nodeId: string, field: string) {
 		const newText = el.innerText.trim();
 		if (newText !== originalText) {
-			store.updateProps(nodeId, { [field]: newText });
+			// Inline-edited fields (text/content/label) are localizable.
+			// Write into the active locale, preserving other translations,
+			// so editing "en" doesn't clobber "es"/"fr".
+			const supported = store.document.value.i18n?.supported ?? [];
+			if (supported.length > 1) {
+				const node = findNode(store.document.value.root, nodeId);
+				const existing = node?.props[field];
+				const t: Record<string, unknown> = isLocalized(existing)
+					? { ...existing.$t }
+					: {};
+				t[store.locale.value] = newText;
+				store.updateProps(nodeId, { [field]: { $t: t } });
+			} else {
+				store.updateProps(nodeId, { [field]: newText });
+			}
 		}
 		cleanup(el);
 	}

@@ -35,11 +35,11 @@ const emit = defineEmits<{ openPalette: [] }>();
 	width: 220px;
 	min-width: 220px;
 	flex-shrink: 0;
-	border-right: 1px solid #1e2130;
+	border-right: 1px solid var(--color-border);
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
-	background: #16181f;
+	background: var(--color-surface-raised);
 }
 .kiv-tree__header {
 	padding: 8px 12px;
@@ -48,7 +48,7 @@ const emit = defineEmits<{ openPalette: [] }>();
 	text-transform: uppercase;
 	letter-spacing: 0.1em;
 	color: var(--color-text-secondary);
-	border-bottom: 1px solid #1e2130;
+	border-bottom: 1px solid var(--color-border);
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -61,7 +61,7 @@ const emit = defineEmits<{ openPalette: [] }>();
 .kiv-tree__body::-webkit-scrollbar { width: 3px; }
 .kiv-tree__body::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
 .kiv-tree__footer {
-	border-top: 1px solid #1e2130;
+	border-top: 1px solid var(--color-border);
 	padding: 6px 8px;
 }
 .kiv-tree__add-btn {

@@ -31,6 +31,30 @@ export function findNode(doc: KivDocument, id: string): NodeLocation | null {
 	return findInTree(doc.root, id, null, null, 0);
 }
 
+/** True if any node in the document already uses this id. */
+export function nodeIdExists(doc: KivDocument, id: string): boolean {
+	return findNode(doc, id) !== null;
+}
+
+/**
+ * Renames a node's id. Returns a new document.
+ * No-op if the new id is empty, unchanged, or already taken by another node.
+ */
+export function renameNode(
+	doc: KivDocument,
+	id: string,
+	newId: string,
+): KivDocument {
+	const trimmed = newId.trim();
+	if (!trimmed || trimmed === id) return doc;
+	if (nodeIdExists(doc, trimmed)) return doc; // collision — reject
+	const next = cloneDocument(doc);
+	const loc = findNode(next, id);
+	if (!loc) return next;
+	loc.node.id = trimmed;
+	return next;
+}
+
 /** Deep-clones a KivDocument (structure only — no functions). */
 export function cloneDocument(doc: KivDocument): KivDocument {
 	return JSON.parse(JSON.stringify(doc)) as KivDocument;
@@ -79,6 +103,28 @@ export function removeNode(doc: KivDocument, id: string): KivDocument {
 	if (!slot) return next;
 	slot.splice(loc.index, 1);
 	return next;
+}
+
+/** Deep-clones a node tree and reassigns all ids with a suffix to avoid collisions. */
+function reIdNode(node: KivNode, suffix: string): KivNode {
+	const newSlots: Record<string, KivNode[]> = {};
+	for (const [slot, children] of Object.entries(node.slots ?? {})) {
+		newSlots[slot] = children.map((c) => reIdNode(c, suffix));
+	}
+	return {
+		...node,
+		id: `${node.id}-${suffix}`,
+		slots: Object.keys(newSlots).length ? newSlots : undefined,
+	};
+}
+
+/** Duplicates a node (with new ids) and inserts it right after the original. */
+export function duplicateNode(doc: KivDocument, id: string): KivDocument {
+	const loc = findNode(doc, id);
+	if (!loc?.parent || loc.slotName === null) return doc;
+	const suffix = Math.random().toString(36).slice(2, 6);
+	const clone = reIdNode(loc.node, suffix);
+	return addNode(doc, loc.parent.id, loc.slotName, clone, loc.index + 1);
 }
 
 /** Moves a node to a different parent/slot/index. Returns a new document. */

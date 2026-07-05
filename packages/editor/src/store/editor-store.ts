@@ -3,8 +3,11 @@ import { computed, ref } from "vue";
 import {
 	addNode,
 	cloneDocument,
+	duplicateNode,
 	moveNode,
+	nodeIdExists,
 	removeNode,
+	renameNode,
 	updateNodeProps,
 } from "../utils/document-ops";
 
@@ -16,9 +19,13 @@ export interface EditorStore {
 	canUndo: Readonly<{ value: boolean }>;
 	canRedo: Readonly<{ value: boolean }>;
 	breakpoint: Readonly<{ value: Breakpoint }>;
+	locale: Readonly<{ value: string }>;
 	select(id: string | null): void;
 	setBreakpoint(bp: Breakpoint): void;
+	setLocale(locale: string): void;
 	updateProps(id: string, patch: Record<string, unknown>): void;
+	renameNode(id: string, newId: string): void;
+	canUseId(id: string): boolean;
 	addNode(
 		parentId: string,
 		slotName: string,
@@ -26,6 +33,7 @@ export interface EditorStore {
 		index?: number,
 	): void;
 	removeNode(id: string): void;
+	duplicateNode(id: string): void;
 	moveNode(
 		id: string,
 		targetParentId: string,
@@ -45,6 +53,7 @@ export function useEditorStore(
 	const future = ref<KivDocument[]>([]);
 	const selectedId = ref<string | null>(null);
 	const breakpoint = ref<Breakpoint>("base");
+	const locale = ref<string>(initialDocument.i18n?.default ?? "en");
 
 	function commit(next: KivDocument) {
 		past.value = [
@@ -81,8 +90,29 @@ export function useEditorStore(
 		breakpoint.value = bp;
 	}
 
+	function setLocale(next: string) {
+		locale.value = next;
+	}
+
 	function updateProps(id: string, patch: Record<string, unknown>) {
 		commit(updateNodeProps(present.value, id, patch));
+	}
+
+	function rename(id: string, newId: string) {
+		const trimmed = newId.trim();
+		if (!trimmed || trimmed === id) return;
+		if (nodeIdExists(present.value, trimmed)) return; // collision — reject
+		commit(renameNode(present.value, id, trimmed));
+		// Keep the renamed node selected
+		if (selectedId.value === id) selectedId.value = trimmed;
+	}
+
+	// True if `id` is free to use (or is the currently selected node's own id)
+	function canUseId(id: string): boolean {
+		const trimmed = id.trim();
+		if (!trimmed) return false;
+		if (trimmed === selectedId.value) return true;
+		return !nodeIdExists(present.value, trimmed);
 	}
 
 	function add(
@@ -97,6 +127,10 @@ export function useEditorStore(
 	function remove(id: string) {
 		if (selectedId.value === id) selectedId.value = null;
 		commit(removeNode(present.value, id));
+	}
+
+	function duplicate(id: string) {
+		commit(duplicateNode(present.value, id));
 	}
 
 	function move(
@@ -138,11 +172,16 @@ export function useEditorStore(
 		canUndo,
 		canRedo,
 		breakpoint,
+		locale,
 		select,
 		setBreakpoint,
+		setLocale,
 		updateProps,
+		renameNode: rename,
+		canUseId,
 		addNode: add,
 		removeNode: remove,
+		duplicateNode: duplicate,
 		moveNode: move,
 		undo,
 		redo,

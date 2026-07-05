@@ -1,8 +1,11 @@
 import type { KivDocument } from "@kiv/engine";
 
+// Demo document with localized content (en / es / fr) using the `$t` shape.
+// Any prop can be either a plain value OR { $t: { <locale>: value } }.
+// The renderer resolves the active locale with a fallback chain.
 export const demoDocument: KivDocument = {
 	schemaVersion: 1,
-	i18n: { default: "en", supported: ["en", "es"] },
+	i18n: { default: "en", supported: ["en", "es", "fr"], fallback: "en" },
 	root: {
 		id: "root",
 		type: "page",
@@ -31,7 +34,7 @@ export const demoDocument: KivDocument = {
 											id: "hero-stack",
 											type: "stack",
 											props: {
-												direction: "vertical",
+												direction: "column",
 												gap: "lg",
 												align: "center",
 											},
@@ -41,7 +44,13 @@ export const demoDocument: KivDocument = {
 														id: "hero-heading",
 														type: "heading",
 														props: {
-															text: "Build visual experiences — fast.",
+															text: {
+																$t: {
+																	en: "Build visual experiences — fast.",
+																	es: "Crea experiencias visuales — rápido.",
+																	fr: "Créez des expériences visuelles — vite.",
+																},
+															},
 															level: "1",
 															color: "#f8fafc",
 															align: "center",
@@ -51,8 +60,13 @@ export const demoDocument: KivDocument = {
 														id: "hero-text",
 														type: "text",
 														props: {
-															content:
-																"Kiv is a headless, JSON-driven, plugin-based visual engine for Vue, React and beyond.",
+															content: {
+																$t: {
+																	en: "Kiv is a headless, JSON-driven, plugin-based visual engine for Vue, React and beyond.",
+																	es: "Kiv es un motor visual headless, basado en JSON y plugins, para Vue, React y más.",
+																	fr: "Kiv est un moteur visuel headless, piloté par JSON et extensible, pour Vue, React et plus.",
+																},
+															},
 															color: "#94a3b8",
 															size: 18,
 															align: "center",
@@ -62,7 +76,7 @@ export const demoDocument: KivDocument = {
 														id: "hero-buttons",
 														type: "stack",
 														props: {
-															direction: "horizontal",
+															direction: "row",
 															gap: "md",
 															align: "center",
 														},
@@ -72,7 +86,13 @@ export const demoDocument: KivDocument = {
 																	id: "hero-cta",
 																	type: "button",
 																	props: {
-																		label: "Get started",
+																		label: {
+																			$t: {
+																				en: "Get started",
+																				es: "Empezar",
+																				fr: "Commencer",
+																			},
+																		},
 																		href: "#features",
 																		linkType: "anchor",
 																		variant: "primary",
@@ -82,7 +102,13 @@ export const demoDocument: KivDocument = {
 																	id: "hero-docs",
 																	type: "button",
 																	props: {
-																		label: "View on GitHub",
+																		label: {
+																			$t: {
+																				en: "View on GitHub",
+																				es: "Ver en GitHub",
+																				fr: "Voir sur GitHub",
+																			},
+																		},
 																		href: "https://github.com",
 																		linkType: "external",
 																		target: "_blank",
@@ -123,14 +149,20 @@ export const demoDocument: KivDocument = {
 										{
 											id: "features-stack",
 											type: "stack",
-											props: { direction: "vertical", gap: "xl" },
+											props: { direction: "column", gap: "xl" },
 											slots: {
 												default: [
 													{
 														id: "features-heading",
 														type: "heading",
 														props: {
-															text: "Everything you need.",
+															text: {
+																$t: {
+																	en: "Everything you need.",
+																	es: "Todo lo que necesitas.",
+																	fr: "Tout ce qu'il vous faut.",
+																},
+															},
 															level: "2",
 															color: "#0f172a",
 															align: "center",
@@ -139,10 +171,8 @@ export const demoDocument: KivDocument = {
 													{
 														id: "features-grid",
 														type: "grid",
-														// 1 col mobile → 3 col desktop
 														props: {
-															columns: "1",
-															lgColumns: "3",
+															columns: { base: "1", lg: "3" },
 															gap: "lg",
 														},
 														slots: {
@@ -157,7 +187,7 @@ export const demoDocument: KivDocument = {
 																				id: "f1-stack",
 																				type: "stack",
 																				props: {
-																					direction: "vertical",
+																					direction: "column",
 																					gap: "sm",
 																				},
 																				slots: {
@@ -166,7 +196,13 @@ export const demoDocument: KivDocument = {
 																							id: "feature-1-heading",
 																							type: "heading",
 																							props: {
-																								text: "Headless",
+																								text: {
+																									$t: {
+																										en: "Headless",
+																										es: "Headless",
+																										fr: "Headless",
+																									},
+																								},
 																								level: "3",
 																								color: "#1d4ed8",
 																							},
@@ -175,8 +211,13 @@ export const demoDocument: KivDocument = {
 																							id: "feature-1-text",
 																							type: "text",
 																							props: {
-																								content:
-																									"Framework-agnostic core. Use Vue, React, or any renderer.",
+																								content: {
+																									$t: {
+																										en: "Framework-agnostic core. Use Vue, React, or any renderer.",
+																										es: "Núcleo agnóstico de framework. Usa Vue, React o cualquier renderer.",
+																										fr: "Cœur indépendant du framework. Vue, React ou tout autre renderer.",
+																									},
+																								},
 																								size: 16,
 																								color: "#475569",
 																							},
@@ -197,7 +238,7 @@ export const demoDocument: KivDocument = {
 																				id: "f2-stack",
 																				type: "stack",
 																				props: {
-																					direction: "vertical",
+																					direction: "column",
 																					gap: "sm",
 																				},
 																				slots: {
@@ -206,7 +247,13 @@ export const demoDocument: KivDocument = {
 																							id: "feature-2-heading",
 																							type: "heading",
 																							props: {
-																								text: "JSON-Driven",
+																								text: {
+																									$t: {
+																										en: "JSON-Driven",
+																										es: "Basado en JSON",
+																										fr: "Piloté par JSON",
+																									},
+																								},
 																								level: "3",
 																								color: "#1d4ed8",
 																							},
@@ -215,8 +262,13 @@ export const demoDocument: KivDocument = {
 																							id: "feature-2-text",
 																							type: "text",
 																							props: {
-																								content:
-																									"Your document is pure JSON. Store it anywhere, version it, migrate it.",
+																								content: {
+																									$t: {
+																										en: "Your document is pure JSON. Store it anywhere, version it, migrate it.",
+																										es: "Tu documento es JSON puro. Guárdalo donde sea, versiónalo, migra.",
+																										fr: "Votre document est du JSON pur. Stockez-le, versionnez-le, migrez-le.",
+																									},
+																								},
 																								size: 16,
 																								color: "#475569",
 																							},
@@ -237,7 +289,7 @@ export const demoDocument: KivDocument = {
 																				id: "f3-stack",
 																				type: "stack",
 																				props: {
-																					direction: "vertical",
+																					direction: "column",
 																					gap: "sm",
 																				},
 																				slots: {
@@ -246,7 +298,13 @@ export const demoDocument: KivDocument = {
 																							id: "feature-3-heading",
 																							type: "heading",
 																							props: {
-																								text: "Plugin-Based",
+																								text: {
+																									$t: {
+																										en: "Plugin-Based",
+																										es: "Basado en plugins",
+																										fr: "Basé sur des plugins",
+																									},
+																								},
 																								level: "3",
 																								color: "#1d4ed8",
 																							},
@@ -255,8 +313,13 @@ export const demoDocument: KivDocument = {
 																							id: "feature-3-text",
 																							type: "text",
 																							props: {
-																								content:
-																									"Extend the engine with plugins. Analytics, forms, modals — never touch the core.",
+																								content: {
+																									$t: {
+																										en: "Extend the engine with plugins. Analytics, forms, modals — never touch the core.",
+																										es: "Extiende el motor con plugins. Analytics, formularios, modales — sin tocar el núcleo.",
+																										fr: "Étendez le moteur avec des plugins. Analytics, formulaires, modales — sans toucher au cœur.",
+																									},
+																								},
 																								size: 16,
 																								color: "#475569",
 																							},
@@ -302,7 +365,7 @@ export const demoDocument: KivDocument = {
 											id: "visual-stack",
 											type: "stack",
 											props: {
-												direction: "vertical",
+												direction: "column",
 												gap: "lg",
 												align: "center",
 											},
@@ -312,7 +375,13 @@ export const demoDocument: KivDocument = {
 														id: "visual-heading",
 														type: "heading",
 														props: {
-															text: "See it in action.",
+															text: {
+																$t: {
+																	en: "See it in action.",
+																	es: "Míralo en acción.",
+																	fr: "Voyez-le en action.",
+																},
+															},
 															level: "2",
 															color: "#0f172a",
 															align: "center",
@@ -323,7 +392,13 @@ export const demoDocument: KivDocument = {
 														type: "image",
 														props: {
 															src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80",
-															alt: "Kiv visual engine demo",
+															alt: {
+																$t: {
+																	en: "Kiv visual engine demo",
+																	es: "Demo del motor visual Kiv",
+																	fr: "Démo du moteur visuel Kiv",
+																},
+															},
 															fit: "cover",
 															aspectRatio: "16/9",
 														},

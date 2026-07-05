@@ -1,32 +1,61 @@
 <script setup lang="ts">
-defineProps<{ label: string; modelValue?: string }>();
+defineProps<{ modelValue?: string }>();
 defineEmits<{ "update:modelValue": [value: string] }>();
 </script>
 
 <template>
-	<label class="flex flex-col gap-1.5">
-		<span class="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-text-secondary)]">
-			{{ label }}
-		</span>
-		<div class="flex items-center gap-2">
-			<div class="relative h-7 w-7 flex-shrink-0 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border)]">
-				<input
-					type="color"
-					class="absolute inset-0 h-full w-full cursor-pointer border-0 p-0 opacity-0"
-					:value="modelValue ?? '#000000'"
-					@input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
-				/>
-				<span
-					class="block h-full w-full rounded-[var(--radius-sm)]"
-					:style="{ background: modelValue ?? '#000000' }"
-				/>
-			</div>
+	<div class="kiv-color">
+		<div class="kiv-color__swatch">
 			<input
-				type="text"
-				class="min-w-0 flex-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-2.5 py-1.5 font-mono text-xs text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)]/30"
-				:value="modelValue ?? ''"
+				type="color"
+				class="kiv-color__input"
+				:value="modelValue ?? '#000000'"
 				@input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
 			/>
+			<span class="kiv-color__preview" :style="{ background: modelValue ?? '#000000' }" />
 		</div>
-	</label>
+		<input
+			type="text"
+			class="kiv-input kiv-color__text"
+			:value="modelValue ?? ''"
+			@input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+		/>
+	</div>
 </template>
+
+<style scoped>
+.kiv-color {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.kiv-color__swatch {
+	position: relative;
+	width: 28px;
+	height: 28px;
+	flex-shrink: 0;
+	border-radius: 5px;
+	border: 1px solid var(--color-border);
+	overflow: hidden;
+}
+.kiv-color__input {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	cursor: pointer;
+	width: 100%;
+	height: 100%;
+	padding: 0;
+	border: none;
+}
+.kiv-color__preview {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+.kiv-color__text {
+	flex: 1;
+	min-width: 0;
+	font-family: monospace;
+}
+</style>

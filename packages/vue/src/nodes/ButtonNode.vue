@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import {
+	BUTTON_RADIUS,
+	BUTTON_SIZE,
+	BUTTON_VARIANT,
+	type ButtonSizeStyle,
+	type ButtonVariantStyle,
+} from "@kiv/nodes";
 import { computed, inject } from "vue";
 import { KIV_EDITOR_MODE_KEY } from "../editor-mode";
 
@@ -10,6 +17,9 @@ const props = defineProps<{
 	variant?: string;
 	size?: string;
 	fullWidth?: boolean;
+	align?: string;
+	borderRadius?: string;
+	fontWeight?: string;
 }>();
 
 const isEditorMode = inject(KIV_EDITOR_MODE_KEY, false);
@@ -26,10 +36,38 @@ const rel = computed(() =>
 	resolvedTarget.value === "_blank" ? "noopener noreferrer" : undefined,
 );
 
+const DEFAULT_SIZE: ButtonSizeStyle = { padding: "9px 20px", fontSize: "14px" };
+const DEFAULT_VARIANT: ButtonVariantStyle = {
+	background: "#6366f1",
+	color: "#ffffff",
+	border: "2px solid transparent",
+};
+
+const sizing = computed(
+	(): ButtonSizeStyle => BUTTON_SIZE[props.size ?? "md"] ?? DEFAULT_SIZE,
+);
+const variantStyle = computed(
+	(): ButtonVariantStyle =>
+		BUTTON_VARIANT[props.variant ?? "primary"] ?? DEFAULT_VARIANT,
+);
+
 const buttonStyle = computed(() => ({
 	display: props.fullWidth ? "block" : "inline-block",
 	width: props.fullWidth ? "100%" : undefined,
-	cursor: isEditorMode ? "default" : undefined,
+	padding: variantStyle.value.textDecoration ? "0" : sizing.value.padding,
+	fontSize: sizing.value.fontSize,
+	fontWeight: props.fontWeight ?? "600",
+	fontFamily: "inherit",
+	textAlign: (props.align ?? "center") as "left" | "center" | "right",
+	borderRadius: BUTTON_RADIUS[props.borderRadius ?? "md"] ?? "6px",
+	textDecoration: variantStyle.value.textDecoration ?? "none",
+	cursor: isEditorMode ? "default" : "pointer",
+	transition: "opacity 0.15s, background 0.15s",
+	lineHeight: "1",
+	whiteSpace: "nowrap" as const,
+	background: variantStyle.value.background,
+	color: variantStyle.value.color,
+	border: variantStyle.value.border,
 }));
 
 function onClick(e: MouseEvent) {
@@ -43,13 +81,7 @@ function onClick(e: MouseEvent) {
 		:target="resolvedTarget"
 		:rel="rel"
 		:style="buttonStyle"
-		:data-kiv-variant="variant"
-		:data-kiv-size="size"
-		:data-kiv-link-type="linkType"
 		data-kiv-type="button"
-		class="kiv-button"
 		@click="onClick"
-	>
-		{{ label }}
-	</a>
+	>{{ label }}</a>
 </template>

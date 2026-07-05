@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { KivNode } from "@kiv/engine";
+import type { KivNode, Registry } from "@kiv/engine";
 import { computed, nextTick, ref, watch } from "vue";
-import { getNodeIcon } from "../utils/node-icons";
+import { getNodeLabel } from "../utils/node-labels";
+import NodeIcon from "./NodeIcon.vue";
 
 interface PaletteItem {
 	type: string;
@@ -28,8 +29,8 @@ const PALETTE: PaletteItem[] = [
 	},
 	{
 		type: "stack",
-		label: "Stack",
-		description: "Flex container — vertical or horizontal",
+		label: "Group",
+		description: "Flex group — vertical column or horizontal row",
 		hasDefaultSlot: true,
 		category: "layout",
 	},
@@ -83,29 +84,50 @@ const CATEGORY_META: Record<string, { label: string; color: string }> = {
 	media: { label: "Media", color: "#fb923c" },
 };
 
+// Leaf node types — cannot contain children
+const LEAF_TYPES = new Set(["heading", "text", "button", "image"]);
+
 const props = defineProps<{
 	open: boolean;
 	selectedNodeType?: string;
+	selectedNodeLabel?: string;
+	registry?: Registry;
+	theme?: "dark" | "light";
 }>();
 
 const emit = defineEmits<{
 	close: [];
-	add: [node: KivNode, position: "inside" | "after"];
+	add: [node: KivNode];
 }>();
 
 const search = ref("");
-const position = ref<"inside" | "after">("inside");
 const searchInput = ref<HTMLInputElement | null>(null);
+const activeIndex = ref(0);
 
 watch(
 	() => props.open,
 	(val) => {
 		if (val) {
 			search.value = "";
+			activeIndex.value = 0;
 			nextTick(() => searchInput.value?.focus());
 		}
 	},
 );
+
+// Reset highlight when the search query changes
+watch(search, () => {
+	activeIndex.value = 0;
+});
+
+// Describe where the node will land
+const insertHint = computed(() => {
+	const type = props.selectedNodeType;
+	const label = props.selectedNodeLabel ?? (type ? getNodeLabel(type) : null);
+	if (!type) return "Will be added to the end of the page";
+	if (LEAF_TYPES.has(type)) return `Will be added after "${label}"`;
+	return `Will be added inside "${label}"`;
+});
 
 const filtered = computed(() => {
 	const q = search.value.toLowerCase().trim();
@@ -124,22 +146,58 @@ function categoryItems(cat: string) {
 	return filtered.value.filter((p) => p.category === cat);
 }
 
+// Flat list in display order — used for keyboard navigation
+const flatItems = computed(() =>
+	categories.flatMap((cat) => categoryItems(cat)),
+);
+
+function isActive(item: PaletteItem) {
+	return flatItems.value[activeIndex.value]?.type === item.type;
+}
+
 function addNode(item: PaletteItem) {
+	const defaults = props.registry?.get(item.type)?.defaults ?? {};
 	const node: KivNode = {
 		id: `${item.type}-${Math.random().toString(36).slice(2, 7)}`,
 		type: item.type,
-		props: {},
+		props: { ...defaults },
 		slots: item.hasDefaultSlot ? { default: [] } : undefined,
 	};
-	emit("add", node, position.value);
+	emit("add", node);
 }
 
 function onBackdrop(e: MouseEvent) {
 	if (e.target === e.currentTarget) emit("close");
 }
 
+// Grid is 2 columns — arrows move accordingly
 function onKeydown(e: KeyboardEvent) {
-	if (e.key === "Escape") emit("close");
+	const items = flatItems.value;
+	const count = items.length;
+
+	if (e.key === "Escape") {
+		emit("close");
+		return;
+	}
+	if (!count) return;
+
+	if (e.key === "ArrowDown") {
+		e.preventDefault();
+		activeIndex.value = Math.min(count - 1, activeIndex.value + 2);
+	} else if (e.key === "ArrowUp") {
+		e.preventDefault();
+		activeIndex.value = Math.max(0, activeIndex.value - 2);
+	} else if (e.key === "ArrowRight") {
+		e.preventDefault();
+		activeIndex.value = Math.min(count - 1, activeIndex.value + 1);
+	} else if (e.key === "ArrowLeft") {
+		e.preventDefault();
+		activeIndex.value = Math.max(0, activeIndex.value - 1);
+	} else if (e.key === "Enter") {
+		e.preventDefault();
+		const item = items[activeIndex.value];
+		if (item) addNode(item);
+	}
 }
 </script>
 
@@ -149,6 +207,7 @@ function onKeydown(e: KeyboardEvent) {
 			<div
 				v-if="open"
 				class="kiv-palette-backdrop"
+				:class="theme === 'light' ? 'kiv-editor--light' : 'kiv-editor--dark'"
 				@click="onBackdrop"
 				@keydown="onKeydown"
 			>
@@ -183,65 +242,67 @@ function onKeydown(e: KeyboardEvent) {
 						/>
 					</div>
 
-					<!-- Position toggle -->
-					<div class="kiv-palette-modal__position">
-						<span class="kiv-palette-modal__position-label">Insert</span>
-						<div class="kiv-palette-modal__position-tabs">
-							<button
-								type="button"
-								class="kiv-palette-modal__position-tab"
-								:class="{ active: position === 'inside' }"
-								@click="position = 'inside'"
-							>
-								<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-									<rect x="1" y="1" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/>
-									<rect x="3.5" y="3.5" width="5" height="5" rx="1" fill="currentColor" opacity=".5"/>
-								</svg>
-								Inside selected
-							</button>
-							<button
-								type="button"
-								class="kiv-palette-modal__position-tab"
-								:class="{ active: position === 'after' }"
-								@click="position = 'after'"
-							>
-								<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-									<rect x="1" y="1" width="10" height="5" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
-									<rect x="1" y="8" width="10" height="3" rx="1" fill="currentColor" opacity=".4"/>
-								</svg>
-								After selected
-							</button>
-						</div>
+					<!-- Insert hint -->
+					<div class="kiv-palette-modal__hint">
+						<svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+							<circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.2"/>
+							<path d="M5.5 5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+							<circle cx="5.5" cy="3.5" r="0.6" fill="currentColor"/>
+						</svg>
+						{{ insertHint }}
 					</div>
 
-					<!-- Node list -->
+					<!-- Node grid -->
 					<div class="kiv-palette-modal__list">
 						<template v-for="cat in categories" :key="cat">
 							<div v-if="categoryItems(cat).length" class="kiv-palette-modal__group">
-								<div class="kiv-palette-modal__group-label" :style="{ color: CATEGORY_META[cat]?.color }">
+								<div class="kiv-palette-modal__group-label">
+									<span class="kiv-palette-modal__group-dot" :style="{ background: CATEGORY_META[cat]?.color }" />
 									{{ CATEGORY_META[cat]?.label }}
 								</div>
-								<button
-									v-for="item in categoryItems(cat)"
-									:key="item.type"
-									type="button"
-									class="kiv-palette-modal__item"
-									@click="addNode(item)"
-								>
-									<span class="kiv-palette-modal__item-icon">{{ getNodeIcon(item.type) }}</span>
-									<span class="kiv-palette-modal__item-body">
-										<span class="kiv-palette-modal__item-name">{{ item.label }}</span>
-										<span class="kiv-palette-modal__item-desc">{{ item.description }}</span>
-									</span>
-									<svg class="kiv-palette-modal__item-arrow" width="12" height="12" viewBox="0 0 12 12" fill="none">
-										<path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-									</svg>
-								</button>
+								<div class="kiv-palette-modal__grid">
+									<button
+										v-for="item in categoryItems(cat)"
+										:key="item.type"
+										type="button"
+										class="kiv-palette-modal__card"
+										:class="{ 'kiv-palette-modal__card--active': isActive(item) }"
+										@click="addNode(item)"
+										@mouseenter="activeIndex = flatItems.findIndex((f) => f.type === item.type)"
+									>
+										<span
+											class="kiv-palette-modal__card-icon"
+											:style="{
+												color: CATEGORY_META[item.category]?.color,
+												background: `${CATEGORY_META[item.category]?.color}1a`,
+											}"
+										><NodeIcon :type="item.type" :size="18" /></span>
+										<span class="kiv-palette-modal__card-name">{{ item.label }}</span>
+										<span class="kiv-palette-modal__card-desc">{{ item.description }}</span>
+									</button>
+								</div>
 							</div>
 						</template>
 						<div v-if="!filtered.length" class="kiv-palette-modal__empty">
+							<div class="kiv-palette-modal__empty-icon">🔍</div>
 							No nodes match "{{ search }}"
 						</div>
+					</div>
+
+					<!-- Footer with keyboard hints -->
+					<div class="kiv-palette-modal__footer">
+						<span class="kiv-palette-modal__kbd-group">
+							<kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd>
+							<span class="kiv-palette-modal__kbd-label">navigate</span>
+						</span>
+						<span class="kiv-palette-modal__kbd-group">
+							<kbd>↵</kbd>
+							<span class="kiv-palette-modal__kbd-label">add</span>
+						</span>
+						<span class="kiv-palette-modal__kbd-group">
+							<kbd>esc</kbd>
+							<span class="kiv-palette-modal__kbd-label">close</span>
+						</span>
 					</div>
 				</div>
 			</div>
@@ -262,11 +323,11 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 .kiv-palette-modal {
-	width: 420px;
-	max-height: 560px;
-	background: #16181f;
-	border: 1px solid #252840;
-	border-radius: 12px;
+	width: 480px;
+	max-height: 600px;
+	background: var(--color-surface-raised);
+	border: 1px solid var(--color-border);
+	border-radius: 14px;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
@@ -278,7 +339,7 @@ function onKeydown(e: KeyboardEvent) {
 	align-items: center;
 	justify-content: space-between;
 	padding: 14px 16px 10px;
-	border-bottom: 1px solid #1e2130;
+	border-bottom: 1px solid var(--color-border);
 	flex-shrink: 0;
 }
 .kiv-palette-modal__title {
@@ -310,7 +371,7 @@ function onKeydown(e: KeyboardEvent) {
 .kiv-palette-modal__search {
 	position: relative;
 	padding: 10px 12px 8px;
-	border-bottom: 1px solid #1e2130;
+	border-bottom: 1px solid var(--color-border);
 	flex-shrink: 0;
 }
 .kiv-palette-modal__search-icon {
@@ -324,8 +385,8 @@ function onKeydown(e: KeyboardEvent) {
 .kiv-palette-modal__search-input {
 	width: 100%;
 	padding: 7px 10px 7px 32px;
-	background: #0d0f17;
-	border: 1px solid #252840;
+	background: var(--color-surface-base);
+	border: 1px solid var(--color-border);
 	border-radius: 7px;
 	color: var(--color-text-primary);
 	font-size: 0.82rem;
@@ -340,130 +401,152 @@ function onKeydown(e: KeyboardEvent) {
 	color: var(--color-text-muted);
 }
 
-.kiv-palette-modal__position {
+/* Insert hint */
+.kiv-palette-modal__hint {
 	display: flex;
 	align-items: center;
-	gap: 10px;
-	padding: 8px 14px;
-	border-bottom: 1px solid #1e2130;
-	flex-shrink: 0;
-}
-.kiv-palette-modal__position-label {
+	gap: 6px;
+	padding: 7px 14px;
+	border-bottom: 1px solid var(--color-border);
 	font-size: 0.7rem;
 	color: var(--color-text-muted);
 	flex-shrink: 0;
-}
-.kiv-palette-modal__position-tabs {
-	display: flex;
-	gap: 4px;
-}
-.kiv-palette-modal__position-tab {
-	display: flex;
-	align-items: center;
-	gap: 5px;
-	padding: 4px 10px;
-	border: 1px solid transparent;
-	border-radius: 6px;
-	background: transparent;
-	color: var(--color-text-muted);
-	font-size: 0.72rem;
-	font-family: inherit;
-	cursor: pointer;
-	transition: background 0.1s, color 0.1s, border-color 0.1s;
-}
-.kiv-palette-modal__position-tab:hover {
-	background: #1a1d2e;
-	color: var(--color-text-secondary);
-}
-.kiv-palette-modal__position-tab.active {
-	background: var(--color-accent-muted);
-	border-color: rgba(99, 102, 241, 0.35);
-	color: var(--color-accent-light);
+	background: var(--color-surface-raised);
 }
 
 .kiv-palette-modal__list {
 	flex: 1;
 	overflow-y: auto;
-	padding: 6px 0 10px;
+	padding: 10px 14px 14px;
 }
-.kiv-palette-modal__list::-webkit-scrollbar { width: 3px; }
-.kiv-palette-modal__list::-webkit-scrollbar-thumb { background: #252840; border-radius: 2px; }
+.kiv-palette-modal__list::-webkit-scrollbar { width: 4px; }
+.kiv-palette-modal__list::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
 
-.kiv-palette-modal__group { padding: 0; }
+.kiv-palette-modal__group { padding: 0; margin-bottom: 14px; }
+.kiv-palette-modal__group:last-child { margin-bottom: 0; }
 .kiv-palette-modal__group-label {
-	padding: 8px 14px 4px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 0 2px 8px;
 	font-size: 0.62rem;
 	font-weight: 700;
 	text-transform: uppercase;
-	letter-spacing: 0.08em;
+	letter-spacing: 0.09em;
+	color: var(--color-text-muted);
+}
+.kiv-palette-modal__group-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	flex-shrink: 0;
 }
 
-.kiv-palette-modal__item {
+/* Card grid — 2 columns */
+.kiv-palette-modal__grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 6px;
+}
+
+.kiv-palette-modal__card {
 	display: flex;
-	align-items: center;
-	gap: 10px;
-	width: 100%;
-	padding: 8px 14px;
-	background: none;
-	border: none;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+	padding: 12px;
+	background: var(--color-surface-overlay);
+	border: 1px solid transparent;
+	border-radius: 9px;
 	cursor: pointer;
 	font-family: inherit;
 	text-align: left;
-	transition: background 0.1s;
+	transition: background 0.12s, border-color 0.12s, transform 0.06s;
 }
-.kiv-palette-modal__item:hover {
-	background: #1a1d2e;
+.kiv-palette-modal__card:hover,
+.kiv-palette-modal__card--active {
+	background: var(--color-surface-overlay);
+	border-color: rgba(99, 102, 241, 0.4);
 }
-.kiv-palette-modal__item:hover .kiv-palette-modal__item-arrow {
-	opacity: 1;
-	transform: translateX(2px);
+.kiv-palette-modal__card--active {
+	box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.25);
+}
+.kiv-palette-modal__card:active {
+	transform: scale(0.98);
 }
 
-.kiv-palette-modal__item-icon {
-	width: 32px;
-	height: 32px;
+.kiv-palette-modal__card-icon {
+	width: 34px;
+	height: 34px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: #1a1d2e;
-	border: 1px solid #252840;
-	border-radius: 7px;
-	font-size: 0.85rem;
+	border-radius: 8px;
+	font-size: 1rem;
 	flex-shrink: 0;
 }
-
-.kiv-palette-modal__item-body {
-	flex: 1;
-	min-width: 0;
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-}
-.kiv-palette-modal__item-name {
-	font-size: 0.8rem;
-	font-weight: 500;
+.kiv-palette-modal__card-name {
+	font-size: 0.82rem;
+	font-weight: 600;
 	color: var(--color-text-primary);
 }
-.kiv-palette-modal__item-desc {
-	font-size: 0.7rem;
+.kiv-palette-modal__card-desc {
+	font-size: 0.68rem;
+	line-height: 1.35;
 	color: var(--color-text-muted);
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	-webkit-box-orient: vertical;
 	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.kiv-palette-modal__item-arrow {
-	color: var(--color-text-muted);
-	flex-shrink: 0;
-	opacity: 0;
-	transition: opacity 0.1s, transform 0.1s;
 }
 
 .kiv-palette-modal__empty {
-	padding: 32px 14px;
+	padding: 40px 14px;
 	text-align: center;
-	font-size: 0.78rem;
+	font-size: 0.8rem;
 	color: var(--color-text-muted);
+}
+.kiv-palette-modal__empty-icon {
+	font-size: 1.6rem;
+	margin-bottom: 8px;
+	opacity: 0.5;
+}
+
+/* Footer keyboard hints */
+.kiv-palette-modal__footer {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 9px 16px;
+	border-top: 1px solid var(--color-border);
+	background: var(--color-surface-raised);
+	flex-shrink: 0;
+}
+.kiv-palette-modal__kbd-group {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+.kiv-palette-modal__footer kbd {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 16px;
+	height: 16px;
+	padding: 0 4px;
+	background: var(--color-surface-overlay);
+	border: 1px solid var(--color-border);
+	border-radius: 4px;
+	font-size: 0.62rem;
+	font-family: inherit;
+	color: var(--color-text-secondary);
+	line-height: 1;
+}
+.kiv-palette-modal__kbd-label {
+	font-size: 0.65rem;
+	color: var(--color-text-muted);
+	margin-left: 2px;
 }
 
 /* Modal enter/leave transition */

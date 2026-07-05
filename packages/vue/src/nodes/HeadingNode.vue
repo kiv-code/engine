@@ -1,38 +1,37 @@
 <script setup lang="ts">
+import { HEADING_LEVEL_SIZE, LETTER_SPACING, LINE_HEIGHT } from "@kiv/nodes";
 import { computed } from "vue";
 
 const props = defineProps<{
 	text?: string;
 	level?: string;
+	size?: number;
+	weight?: string;
 	color?: string;
 	align?: string;
-	size?: number;
+	lineHeight?: string;
+	letterSpacing?: string;
+	transform?: string;
 }>();
 
 const tag = computed(() => `h${props.level ?? "2"}`);
 
-// Default sizes per heading level (px) — used when no explicit size is set
-const LEVEL_DEFAULTS: Record<string, number> = {
-	"1": 48,
-	"2": 36,
-	"3": 28,
-	"4": 22,
-	"5": 18,
-	"6": 16,
-};
-
 const headingStyle = computed(() => ({
+	fontSize: `${props.size ?? HEADING_LEVEL_SIZE[props.level ?? "2"] ?? 36}px`,
+	fontWeight: props.weight ?? "700",
 	color: props.color ?? "inherit",
-	textAlign: (props.align ?? "left") as "left" | "center" | "right",
-	fontSize: `${props.size ?? LEVEL_DEFAULTS[props.level ?? "2"] ?? 36}px`,
-	lineHeight: "1.2",
+	textAlign: (props.align ?? "left") as "left" | "center" | "right" | "justify",
+	lineHeight: LINE_HEIGHT[props.lineHeight ?? "normal"] ?? "1.4",
+	letterSpacing: LETTER_SPACING[props.letterSpacing ?? "normal"] ?? "0em",
+	textTransform: (props.transform ?? "none") as
+		| "none"
+		| "uppercase"
+		| "lowercase"
+		| "capitalize",
 	margin: "0",
-	fontWeight: "700",
 }));
 </script>
 
 <template>
-	<component :is="tag" :style="headingStyle" data-kiv-type="heading">
-		{{ text }}
-	</component>
+	<component :is="tag" :style="headingStyle" data-kiv-type="heading">{{ text }}</component>
 </template>
