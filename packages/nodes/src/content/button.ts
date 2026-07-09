@@ -1,5 +1,5 @@
 import { defineNode, f } from "@kiv/engine";
-import { escapeHtml, styleToString } from "../html-utils";
+import { escapeHtml, normalizeSvgIconSize, styleToString } from "../html-utils";
 import {
 	BUTTON_RADIUS,
 	BUTTON_SIZE,
@@ -72,7 +72,7 @@ export const buttonNode = defineNode({
 
 		const iconHtml = hasIcon
 			? iconIsSvg
-				? `<span class="kiv-btn-icon">${icon}</span>`
+				? `<span class="kiv-btn-icon">${normalizeSvgIconSize(icon)}</span>`
 				: `<i class="${escapeHtml(icon)} kiv-btn-icon" aria-hidden="true"></i>`
 			: "";
 		const label =

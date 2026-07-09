@@ -191,13 +191,16 @@ function updateFieldValue(
 	}
 	// Always merge into responsive object to preserve other breakpoints
 	const existing = node.props[fieldKey];
-	const compiled = props.registry.get(node.type);
-	const schemaDefault = compiled?.fields[fieldKey]?.default;
 	const current: Record<string, unknown> =
 		existing && typeof existing === "object" && !Array.isArray(existing)
 			? { ...(existing as Record<string, unknown>) }
-			: { base: existing ?? schemaDefault };
+			: {};
 	current[fieldBreakpoint.value] = value;
+	// A field with no "base" value has nothing to fall back to below the
+	// breakpoint being edited, so it silently reverts to the node's own
+	// hardcoded default there. Seed "base" with this same value so the field
+	// applies everywhere until the user explicitly overrides a smaller breakpoint.
+	if (current.base === undefined) current.base = value;
 	store.updateProps(node.id, { [fieldKey]: current });
 }
 

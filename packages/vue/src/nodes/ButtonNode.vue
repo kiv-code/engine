@@ -6,7 +6,7 @@ import {
 	type ButtonSizeStyle,
 	type ButtonVariantStyle,
 } from "@kiv/nodes";
-import { computed, inject, resolveComponent } from "vue";
+import { computed, getCurrentInstance, inject } from "vue";
 import { KIV_BUS_KEY } from "../bus";
 import { KIV_EDITOR_MODE_KEY } from "../editor-mode";
 
@@ -37,21 +37,26 @@ const props = defineProps<{
 const isEditorMode = inject(KIV_EDITOR_MODE_KEY, false);
 const bus = inject(KIV_BUS_KEY, null);
 
-// Detect Vue Router WITHOUT depending on it. If the consumer's app registered
-// vue-router, `RouterLink` resolves to the real component; otherwise
-// resolveComponent returns the string "RouterLink" (unresolved), so we fall
-// back to a plain <a>. @kiv/vue never imports vue-router.
-const resolvedRouterLink = resolveComponent("RouterLink");
-const hasRouter = typeof resolvedRouterLink !== "string";
+// Detect Vue Router WITHOUT depending on it and WITHOUT resolveComponent(),
+// which warns to the console whenever the name isn't found — even when the
+// result is never used. A plain lookup in the app's registered components is
+// silent: if the consumer's app installed vue-router, `RouterLink` is there;
+// otherwise this is undefined and we fall back to a plain <a>. @kiv/vue never
+// imports vue-router.
+const registeredRouterLink = computed(() => {
+	if (isEditorMode || props.linkType !== "internal") return undefined;
+	const components = getCurrentInstance()?.appContext.components;
+	return components?.RouterLink ?? components?.["router-link"];
+});
 
 // For linkType="internal", use RouterLink (SPA, no reload) when a router
 // exists. Everything else (external, anchor, or no router) uses <a>.
-const useRouterLink = computed(
-	() => !isEditorMode && props.linkType === "internal" && hasRouter,
-);
+const useRouterLink = computed(() => !!registeredRouterLink.value);
 
 // The element/component to render: RouterLink or a plain anchor.
-const tag = computed(() => (useRouterLink.value ? resolvedRouterLink : "a"));
+const tag = computed(() =>
+	useRouterLink.value ? registeredRouterLink.value : "a",
+);
 
 const resolvedHref = computed(() =>
 	isEditorMode ? undefined : (props.href ?? "#"),

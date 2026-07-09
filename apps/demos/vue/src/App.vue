@@ -134,15 +134,26 @@ function clearEvents() {
 	events.value = [];
 }
 
+// Which single breakpoint the static export snapshots. Export HTML is meant
+// for email/PDF/SEO-bot contexts that can't run media queries or JS, so it's
+// always ONE fixed layout — this just lets the user pick which one, instead
+// of silently reusing whatever the live preview happened to be scrolled to.
+const exportBreakpoint = ref<Breakpoint>("base");
+
 // Export the current document to static HTML via renderToHtml() — each node
 // type's own toHtml() renders itself; unregistered types fall back to a div.
 function exportHtml() {
 	const body = renderToHtml(doc.value, {
 		registry: engine.registry,
 		locale: previewLocale.value,
-		breakpoint: previewBreakpoint.value,
+		breakpoint: exportBreakpoint.value,
 	});
-	const html = `<!doctype html>\n<html lang="${doc.value.i18n.default}">\n<head><meta charset="utf-8"><title>Kiv export</title></head>\n<body>${body}</body>\n</html>`;
+	// Nodes render only their OWN inline styles — the theme variables (colors,
+	// spacing tokens) and the base reset/font-family live in the app's global
+	// stylesheet in the live demo. Neither travels with a bare renderToHtml()
+	// call, so both must be inlined here or the export looks unstyled.
+	const resetCss = `*,*::before,*::after{box-sizing:border-box;}html,body{margin:0;padding:0;}body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;}img{max-width:100%;}`;
+	const html = `<!doctype html>\n<html lang="${doc.value.i18n.default}">\n<head><meta charset="utf-8"><title>Kiv export</title><style>${resetCss}\n${engine.css()}</style></head>\n<body>${body}</body>\n</html>`;
 	const blob = new Blob([html], { type: "text/html" });
 	window.open(URL.createObjectURL(blob), "_blank");
 }
@@ -173,6 +184,17 @@ function exportHtml() {
 				<template v-else-if="saveState === 'saved'">✓ Saved</template>
 				<template v-else>Autosave on</template>
 			</span>
+			<select
+				v-model="exportBreakpoint"
+				class="demo-export-bp"
+				title="Export HTML is a single static snapshot (for email / PDF / SEO) — pick which breakpoint it renders at"
+			>
+				<option value="base">Export @ base (mobile)</option>
+				<option value="sm">Export @ sm</option>
+				<option value="md">Export @ md</option>
+				<option value="lg">Export @ lg</option>
+				<option value="xl">Export @ xl (desktop)</option>
+			</select>
 			<button type="button" class="demo-reset" @click="exportHtml">Export HTML</button>
 			<button type="button" class="demo-reset" @click="resetToDemo">Reset</button>
 
@@ -367,6 +389,16 @@ body {
 .demo-reset:hover {
 	background: #1a1d2a;
 	color: #e2e8f0;
+}
+.demo-export-bp {
+	padding: 4px 8px;
+	border: 1px solid #1e2130;
+	border-radius: 6px;
+	background: #0d0f17;
+	color: #94a3b8;
+	font-size: 0.7rem;
+	font-family: inherit;
+	cursor: pointer;
 }
 
 .demo-body {
