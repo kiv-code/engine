@@ -36,4 +36,12 @@ export interface FieldDescriptor<T = unknown> {
 	 * No afecta al render ni al JSON — es puramente una pista para el inspector.
 	 */
 	showIf?: { field: string; equals: string | string[] };
+	/** Texto de ejemplo mostrado en el control cuando está vacío. */
+	placeholder?: string;
+	/** Texto de ayuda mostrado debajo del control en el inspector. */
+	hint?: string;
+	/** Marca el campo como obligatorio (pista visual para el inspector). */
+	required?: boolean;
+	/** Oculta el campo del inspector (para props de sistema). */
+	hidden?: boolean;
 }

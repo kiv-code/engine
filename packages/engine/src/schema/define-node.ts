@@ -9,12 +9,24 @@ export interface NodeDefinition<F extends FieldMap = FieldMap> {
 	fields: F;
 	/** Categoría para agrupar en el editor (opcional). */
 	category?: string;
+	/** Nombre legible mostrado en el árbol y la paleta. */
+	label?: string;
+	/** Identificador de ícono mostrado en el árbol y la paleta. */
+	icon?: string;
+	/** Descripción corta mostrada en la paleta. */
+	description?: string;
+	/** Restringe qué tipos de nodo puede recibir cada slot, e.g. `{ default: ["column"] }`. */
+	slotConstraints?: Record<string, string[]>;
 }
 
 export interface CompiledNode<F extends FieldMap = FieldMap> {
 	type: string;
 	fields: F;
 	category?: string;
+	label?: string;
+	icon?: string;
+	description?: string;
+	slotConstraints?: Record<string, string[]>;
 	/** Schema Zod que valida el objeto de props completo. */
 	schema: ZodType;
 	/** Props por defecto, derivadas de los `default` de cada field. */
@@ -38,6 +50,10 @@ export function defineNode<const F extends FieldMap>(
 		type: def.type,
 		fields: def.fields,
 		category: def.category,
+		label: def.label,
+		icon: def.icon,
+		description: def.description,
+		slotConstraints: def.slotConstraints,
 		schema: z.object(shape),
 		defaults,
 	};

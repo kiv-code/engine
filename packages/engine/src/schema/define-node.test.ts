@@ -29,4 +29,40 @@ describe("defineNode", () => {
 		const props: InferProps<typeof heading> = { text: "Hola", level: 3 };
 		expect(props.text).toBe("Hola");
 	});
+
+	it("pasa label, icon, description y slotConstraints al nodo compilado", () => {
+		const column = defineNode({
+			type: "column",
+			category: "layout",
+			label: "Column",
+			icon: "columns",
+			description: "A single column inside a grid.",
+			slotConstraints: { default: ["heading", "text"] },
+			fields: {},
+		});
+		expect(column.label).toBe("Column");
+		expect(column.icon).toBe("columns");
+		expect(column.description).toBe("A single column inside a grid.");
+		expect(column.slotConstraints).toEqual({ default: ["heading", "text"] });
+	});
+
+	it("preserves placeholder, hint, required and hidden on field descriptors", () => {
+		const button = defineNode({
+			type: "button",
+			fields: {
+				label: f.text({
+					placeholder: "Click me",
+					hint: "Shown on the button face",
+					required: true,
+				}),
+				id: f.text({ hidden: true }),
+			},
+		});
+		expect(button.fields.label).toMatchObject({
+			placeholder: "Click me",
+			hint: "Shown on the button face",
+			required: true,
+		});
+		expect(button.fields.id).toMatchObject({ hidden: true });
+	});
 });

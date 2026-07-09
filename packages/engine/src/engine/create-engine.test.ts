@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import type { MediaProvider } from "../media";
 import type { KivPlugin } from "../plugin";
 import { defineNode } from "../schema";
+import type { StorageProvider } from "../services";
 import { createEngine } from "./create-engine";
 
 describe("createEngine", () => {
@@ -65,6 +67,60 @@ describe("createEngine", () => {
 		expect(receivedCtx?.bus).toBe(engine.bus);
 		expect(receivedCtx?.registry).toBe(engine.registry);
 		expect(receivedCtx?.theme).toBe(engine.theme);
+	});
+
+	it("exposes the configured media provider on the engine and on plugin context", () => {
+		const provider: MediaProvider = {
+			upload: vi.fn(),
+			resolve: (src) => src,
+			delete: vi.fn(),
+		};
+		const engine = createEngine({ media: { provider } });
+		expect(engine.media).toBe(provider);
+
+		let receivedCtx: Parameters<KivPlugin["install"]>[0] | undefined;
+		engine.use({
+			name: "media-check",
+			install(ctx) {
+				receivedCtx = ctx;
+			},
+		});
+		expect(receivedCtx?.media).toBe(provider);
+	});
+
+	it("exposes the configured services on the engine and on plugin context", () => {
+		const storage: StorageProvider = {
+			get: vi.fn(),
+			set: vi.fn(),
+			remove: vi.fn(),
+		};
+		const engine = createEngine({ services: { storage } });
+		expect(engine.services.storage).toBe(storage);
+		expect(engine.services.auth).toBeUndefined();
+
+		let receivedCtx: Parameters<KivPlugin["install"]>[0] | undefined;
+		engine.use({
+			name: "services-provided-check",
+			install(ctx) {
+				receivedCtx = ctx;
+			},
+		});
+		expect(receivedCtx?.services.storage).toBe(storage);
+	});
+
+	it("context has an empty services container and no editor/media by default", () => {
+		const engine = createEngine();
+		let receivedCtx: Parameters<KivPlugin["install"]>[0] | undefined;
+		const plugin: KivPlugin = {
+			name: "services-check",
+			install(ctx) {
+				receivedCtx = ctx;
+			},
+		};
+		engine.use(plugin);
+		expect(receivedCtx?.services).toEqual({});
+		expect(receivedCtx?.editor).toBeUndefined();
+		expect(receivedCtx?.media).toBeUndefined();
 	});
 
 	it("engine.use() throws on duplicate plugin name", () => {

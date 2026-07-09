@@ -4,7 +4,14 @@
 		{
 			"name": "demo-vue",
 			"runtimeExecutable": "pnpm",
-			"runtimeArgs": ["--filter", "@kiv/demo-vue", "dev", "--port", "5199", "--strictPort"],
+			"runtimeArgs": [
+				"--filter",
+				"@kiv/demo-vue",
+				"dev",
+				"--port",
+				"5199",
+				"--strictPort"
+			],
 			"port": 5199
 		}
 	]

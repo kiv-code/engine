@@ -38,13 +38,28 @@ export {
 	buildLocaleFallbackChain,
 	validateI18nConfig,
 } from "./i18n";
+export type {
+	ImageTransform,
+	MediaAsset,
+	MediaProvider,
+	UploadOptions,
+} from "./media";
 export {
 	CURRENT_SCHEMA_VERSION,
 	type Migration,
 	migrateDocument,
 	migrations,
 } from "./migrations";
-export type { KivPlugin, PluginContext } from "./plugin";
+export type {
+	ComponentDef,
+	EditorExtensionPoints,
+	InspectorTab,
+	KivPlugin,
+	PaletteItem,
+	PluginContext,
+	ShortcutDef,
+	ToolbarButton,
+} from "./plugin";
 export { createRegistry, Registry } from "./registry";
 export {
 	isLocalized,
@@ -65,6 +80,14 @@ export {
 	type InferProps,
 	type NodeDefinition,
 } from "./schema";
+export type {
+	ApiClient,
+	AuthProvider,
+	AuthUser,
+	RouterProvider,
+	ServicesContainer,
+	StorageProvider,
+} from "./services";
 export {
 	defaultTheme,
 	resolveTheme,

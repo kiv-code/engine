@@ -1,9 +1,11 @@
 import { createEventBus } from "../events";
+import type { MediaProvider } from "../media";
 import type { KivPlugin, PluginContext } from "../plugin";
 import { createRegistry } from "../registry";
 import type { ResolveContext } from "../resolver";
 import { resolveNode } from "../resolver";
 import type { CompiledNode } from "../schema";
+import type { ServicesContainer } from "../services";
 import type { ThemeOverride, ThemeTokens } from "../theme";
 import { resolveTheme, themeToCssVars } from "../theme";
 import type { I18nConfig, KivNode } from "../types";
@@ -13,6 +15,8 @@ export interface CreateEngineOptions {
 	i18n?: I18nConfig;
 	plugins?: KivPlugin[];
 	nodes?: CompiledNode[];
+	media?: { provider: MediaProvider };
+	services?: ServicesContainer;
 }
 
 export interface KivEngine {
@@ -20,6 +24,8 @@ export interface KivEngine {
 	registry: ReturnType<typeof createRegistry>;
 	theme: ThemeTokens;
 	i18n: I18nConfig;
+	media?: MediaProvider;
+	services: ServicesContainer;
 	use(plugin: KivPlugin): void;
 	css(): string;
 	resolve(node: KivNode, ctx: ResolveContext): ReturnType<typeof resolveNode>;
@@ -35,6 +41,8 @@ export function createEngine(options: CreateEngineOptions = {}): KivEngine {
 	const registry = createRegistry();
 	const theme = resolveTheme(options.theme);
 	const i18n = options.i18n ?? DEFAULT_I18N;
+	const media = options.media?.provider;
+	const services = options.services ?? {};
 	const installed = new Set<string>();
 
 	if (options.nodes) {
@@ -45,7 +53,14 @@ export function createEngine(options: CreateEngineOptions = {}): KivEngine {
 		if (installed.has(plugin.name)) {
 			throw new Error(`[kiv] El plugin "${plugin.name}" ya está instalado.`);
 		}
-		const ctx: PluginContext = { bus, registry, theme, i18n };
+		const ctx: PluginContext = {
+			bus,
+			registry,
+			theme,
+			i18n,
+			media,
+			services,
+		};
 		plugin.install(ctx);
 		installed.add(plugin.name);
 	}
@@ -68,5 +83,5 @@ export function createEngine(options: CreateEngineOptions = {}): KivEngine {
 		return resolveNode(node, ctx);
 	}
 
-	return { bus, registry, theme, i18n, use, css, resolve };
+	return { bus, registry, theme, i18n, media, services, use, css, resolve };
 }

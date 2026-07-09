@@ -9,6 +9,10 @@ interface BaseOptions<T> {
 	responsive?: boolean;
 	inline?: boolean;
 	showIf?: { field: string; equals: string | string[] };
+	placeholder?: string;
+	hint?: string;
+	required?: boolean;
+	hidden?: boolean;
 }
 
 function text(opts: BaseOptions<string> = {}): FieldDescriptor<string> {
