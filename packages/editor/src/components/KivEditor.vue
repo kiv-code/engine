@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import type { Breakpoint, KivDocument, KivNode, Registry } from "@kiv/engine";
+import type {
+	Breakpoint,
+	EventBus,
+	KivDocument,
+	KivNode,
+	Registry,
+} from "@kiv/engine";
 import type { VueRegistry } from "@kiv/vue";
 import { computed, provide, ref, watch } from "vue";
 import { EDITOR_STORE_KEY } from "../store/context";
@@ -16,11 +22,15 @@ const props = defineProps<{
 	vueRegistry: VueRegistry;
 	title?: string;
 	theme?: "dark" | "light";
+	/** Shared bus (e.g. `engine.bus`) so plugins can observe editor mutations. */
+	bus?: EventBus;
 }>();
 
 const emit = defineEmits<{ "update:document": [doc: KivDocument] }>();
 
-const store = useEditorStore(props.document, props.registry);
+const store = useEditorStore(props.document, props.registry, {
+	bus: props.bus,
+});
 provide(EDITOR_STORE_KEY, store);
 
 watch(

@@ -1,10 +1,10 @@
 import type { Breakpoint } from "../types";
 import { isLocalized, isResponsive } from "./guards";
 
-/** Orden mobile-first: cada nivel hereda del anterior si no está definido. */
+/** Mobile-first order: each level inherits from the previous one if not defined. */
 const BREAKPOINT_ORDER = ["base", "sm", "md", "lg", "xl"] as const;
 
-/** Resuelve el eje responsive: devuelve el valor del breakpoint o el heredado. */
+/** Resolves the responsive axis: returns the breakpoint's value or the inherited one. */
 export function resolveResponsive<T>(
 	value: unknown,
 	breakpoint: Breakpoint,
@@ -13,7 +13,7 @@ export function resolveResponsive<T>(
 		return value as T;
 	}
 	const target = BREAKPOINT_ORDER.indexOf(breakpoint);
-	// Recorre desde el breakpoint pedido hacia abajo hasta encontrar un valor.
+	// Walks down from the requested breakpoint until a value is found.
 	for (let i = target; i >= 0; i--) {
 		const key = BREAKPOINT_ORDER[i];
 		if (key && key in value && value[key as keyof typeof value] !== undefined) {
@@ -23,7 +23,7 @@ export function resolveResponsive<T>(
 	return value.base as T;
 }
 
-/** Resuelve el eje locale: devuelve la traducción, con cadena de fallback. */
+/** Resolves the locale axis: returns the translation, with a fallback chain. */
 export function resolveLocalized<T>(
 	value: unknown,
 	locale: string,
@@ -39,7 +39,7 @@ export function resolveLocalized<T>(
 	if (fallback && fallback in translations) {
 		return translations[fallback] as T;
 	}
-	// Último recurso: la primera traducción disponible, para no romper el render.
+	// Last resort: the first available translation, so the render doesn't break.
 	const first = Object.values(translations)[0];
 	return first as T;
 }

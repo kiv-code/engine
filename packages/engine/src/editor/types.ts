@@ -24,6 +24,10 @@ export interface DocumentMutations {
 	/** No-op if `newId` is empty, unchanged, or already taken. Returns whether the rename happened. */
 	renameNode(id: string, newId: string): boolean;
 	duplicateNode(id: string): void;
+	setNodeFlags(
+		id: string,
+		patch: Partial<Pick<KivNode, "locked" | "visible">>,
+	): void;
 }
 
 export interface EditorEngineOptions {
@@ -46,6 +50,7 @@ declare module "../events/types" {
 		"node.propsChanged": { id: string; patch: Record<string, unknown> };
 		"node.renamed": { id: string; newId: string };
 		"node.duplicated": { id: string };
+		"node.flagsChanged": { id: string };
 		"selection.changed": { ids: readonly string[] };
 		"history.changed": { canUndo: boolean; canRedo: boolean };
 	}

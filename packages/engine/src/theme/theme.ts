@@ -1,7 +1,7 @@
 import { defaultTheme } from "./default-theme";
 import type { ThemeOverride, ThemeTokens } from "./types";
 
-/** Fusiona un override parcial sobre el theme por defecto. */
+/** Merges a partial override onto the default theme. */
 export function resolveTheme(override?: ThemeOverride): ThemeTokens {
 	if (!override) {
 		return defaultTheme;
@@ -17,7 +17,7 @@ export function resolveTheme(override?: ThemeOverride): ThemeTokens {
 }
 
 /**
- * Convierte los tokens en CSS variables.
+ * Converts the tokens into CSS variables.
  * { colors: { primary: "#..." } } → { "--kiv-color-primary": "#..." }
  */
 export function themeToCssVars(theme: ThemeTokens): Record<string, string> {
@@ -40,7 +40,7 @@ export function themeToCssVars(theme: ThemeTokens): Record<string, string> {
 	return vars;
 }
 
-/** Referencia a un token como valor CSS usable: tokenRef("color", "primary") → "var(--kiv-color-primary)" */
+/** Reference to a token as a usable CSS value: tokenRef("color", "primary") → "var(--kiv-color-primary)" */
 export function tokenRef(group: string, name: string): string {
 	return `var(--kiv-${group}-${name})`;
 }

@@ -1,8 +1,20 @@
-import type { Breakpoint, KivDocument, KivNode, Registry } from "@kiv/engine";
+import type {
+	Breakpoint,
+	EventBus,
+	KivDocument,
+	KivNode,
+	Registry,
+	Responsive,
+} from "@kiv/engine";
 import { EditorEngine } from "@kiv/engine";
 import { computed, ref } from "vue";
 
 const HISTORY_LIMIT = 50;
+
+export interface EditorStoreOptions {
+	/** Shared bus (e.g. `engine.bus`) so plugins can observe editor mutations. Creates its own if omitted. */
+	bus?: EventBus;
+}
 
 export interface EditorStore {
 	document: Readonly<{ value: KivDocument }>;
@@ -31,6 +43,8 @@ export interface EditorStore {
 		targetSlot: string,
 		targetIndex: number,
 	): void;
+	setLocked(id: string, locked: boolean): void;
+	setVisible(id: string, visible: Responsive<boolean>): void;
 	undo(): void;
 	redo(): void;
 }
@@ -39,9 +53,11 @@ export interface EditorStore {
 export function useEditorStore(
 	initialDocument: KivDocument,
 	_registry: Registry,
+	options: EditorStoreOptions = {},
 ): EditorStore {
 	const engine = new EditorEngine(initialDocument, {
 		historyLimit: HISTORY_LIMIT,
+		bus: options.bus,
 	});
 
 	const document = ref<KivDocument>(engine.document);
@@ -128,6 +144,14 @@ export function useEditorStore(
 		engine.moveNode({ id, targetParentId, targetSlot, targetIndex });
 	}
 
+	function setLocked(id: string, locked: boolean) {
+		engine.setNodeFlags(id, { locked });
+	}
+
+	function setVisible(id: string, visible: Responsive<boolean>) {
+		engine.setNodeFlags(id, { visible });
+	}
+
 	function undo() {
 		engine.undo();
 	}
@@ -153,6 +177,8 @@ export function useEditorStore(
 		removeNode: remove,
 		duplicateNode: duplicate,
 		moveNode: move,
+		setLocked,
+		setVisible,
 		undo,
 		redo,
 	};

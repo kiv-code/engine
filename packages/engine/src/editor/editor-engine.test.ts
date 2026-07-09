@@ -151,6 +151,17 @@ describe("EditorEngine", () => {
 		expect(engine.canUseId("brand-new")).toBe(true);
 	});
 
+	it("setNodeFlags updates locked/visible and emits node.flagsChanged", () => {
+		const engine = new EditorEngine(makeDoc());
+		const handler = vi.fn();
+		engine.bus.on("node.flagsChanged", handler);
+		engine.setNodeFlags("heading-1", { locked: true, visible: false });
+		const loc = engine.findNode("heading-1");
+		expect(loc?.node.locked).toBe(true);
+		expect(loc?.node.visible).toBe(false);
+		expect(handler).toHaveBeenCalledWith({ id: "heading-1" });
+	});
+
 	it("selection changes emit selection.changed on the bus", () => {
 		const engine = new EditorEngine(makeDoc());
 		const handler = vi.fn();

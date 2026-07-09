@@ -1,8 +1,31 @@
 import { defineNode, f } from "@kiv/engine";
+import { styleToString } from "../html-utils";
+import { GAP, RADIUS, SHADOW, SPACING } from "../scales";
 
 export const stackNode = defineNode({
 	type: "stack",
 	category: "layout",
+	toHtml(props, children) {
+		const style = styleToString({
+			display: "flex",
+			flexDirection: props.direction === "row" ? "row" : "column",
+			gap: GAP[String(props.gap ?? "md")] ?? "16px",
+			alignItems: String(props.align ?? "flex-start"),
+			justifyContent: String(props.justify ?? "flex-start"),
+			flexWrap: props.wrap ? "wrap" : "nowrap",
+			paddingTop: SPACING[String(props.paddingY ?? "none")] ?? "0",
+			paddingBottom: SPACING[String(props.paddingY ?? "none")] ?? "0",
+			paddingLeft: SPACING[String(props.paddingX ?? "none")] ?? "0",
+			paddingRight: SPACING[String(props.paddingX ?? "none")] ?? "0",
+			background:
+				props.background && props.background !== "transparent"
+					? String(props.background)
+					: undefined,
+			borderRadius: RADIUS[String(props.borderRadius ?? "none")] ?? "0",
+			boxShadow: SHADOW[String(props.shadow ?? "none")] ?? "none",
+		});
+		return `<div style="${style}" data-kiv-type="stack">${children.default ?? ""}</div>`;
+	},
 	fields: {
 		direction: f.select(["column", "row"], {
 			label: "Direction",

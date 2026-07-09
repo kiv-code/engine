@@ -1,6 +1,6 @@
 import type { EventBus } from "../events";
 import { createEventBus } from "../events";
-import type { KivDocument } from "../types";
+import type { KivDocument, KivNode } from "../types";
 import {
 	addNode as addNodeOp,
 	cloneDocument,
@@ -11,6 +11,7 @@ import {
 	nodeIdExists,
 	removeNode as removeNodeOp,
 	renameNode as renameNodeOp,
+	setNodeFlags as setNodeFlagsOp,
 	updateNodeProps as updateNodePropsOp,
 } from "./document-ops";
 import { HistoryManager } from "./history";
@@ -127,6 +128,17 @@ export class EditorEngine implements DocumentMutations {
 			id,
 		});
 		this.bus.emit("node.duplicated", { id });
+	}
+
+	setNodeFlags(
+		id: string,
+		patch: Partial<Pick<KivNode, "locked" | "visible">>,
+	): void {
+		this.commit(setNodeFlagsOp(this.document, id, patch), {
+			type: "node.flagsChanged",
+			id,
+		});
+		this.bus.emit("node.flagsChanged", { id });
 	}
 
 	undo(): void {

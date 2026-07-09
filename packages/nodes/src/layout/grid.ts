@@ -1,8 +1,20 @@
 import { defineNode, f } from "@kiv/engine";
+import { styleToString } from "../html-utils";
+import { GAP } from "../scales";
 
 export const gridNode = defineNode({
 	type: "grid",
 	category: "layout",
+	toHtml(props, children) {
+		const style = styleToString({
+			display: "grid",
+			gridTemplateColumns: `repeat(${props.columns ?? "1"}, minmax(0, 1fr))`,
+			columnGap: GAP[String(props.gap ?? "md")] ?? "16px",
+			rowGap: GAP[String(props.rowGap ?? "md")] ?? "16px",
+			alignItems: String(props.alignItems ?? "stretch"),
+		});
+		return `<div style="${style}" data-kiv-type="grid">${children.default ?? ""}</div>`;
+	},
 	fields: {
 		columns: f.select(["1", "2", "3", "4", "6", "12"], {
 			label: "Columns",

@@ -1,8 +1,115 @@
 import { defineNode, f } from "@kiv/engine";
+import { escapeHtml, styleToString } from "../html-utils";
+import { BLUR, RADIUS, SECTION_SPACING, SHADOW } from "../scales";
 
 export const sectionNode = defineNode({
 	type: "section",
 	category: "layout",
+	toHtml(props, children) {
+		const s: Record<string, string | undefined> = {
+			position: "relative",
+			width: "100%",
+			display: "flex",
+			flexDirection: "column",
+		};
+		if (props.background && props.background !== "transparent") {
+			s.backgroundColor = String(props.background);
+		}
+		if (props.backgroundImage) {
+			s.backgroundImage = `url(${props.backgroundImage})`;
+			s.backgroundSize = String(props.backgroundSize ?? "cover");
+			s.backgroundPosition = String(props.backgroundPosition ?? "center");
+		}
+		if (props.gradient) s.backgroundImage = String(props.gradient);
+		if (props.opacity !== undefined && props.opacity !== 1) {
+			s.opacity = String(props.opacity);
+		}
+		if (props.paddingY && props.paddingY !== "none") {
+			const v =
+				SECTION_SPACING[String(props.paddingY)] ?? String(props.paddingY);
+			s.paddingTop = v;
+			s.paddingBottom = v;
+		}
+		if (props.paddingX && props.paddingX !== "none") {
+			const v =
+				SECTION_SPACING[String(props.paddingX)] ?? String(props.paddingX);
+			s.paddingLeft = v;
+			s.paddingRight = v;
+		}
+		if (props.marginY && props.marginY !== "none") {
+			const v = SECTION_SPACING[String(props.marginY)] ?? String(props.marginY);
+			s.marginTop = v;
+			s.marginBottom = v;
+		}
+		if (props.borderWidth && props.borderWidth !== "0") {
+			s.borderWidth = `${props.borderWidth}px`;
+			s.borderStyle = "solid";
+			if (props.borderColor) s.borderColor = String(props.borderColor);
+		}
+		if (props.borderRadius && props.borderRadius !== "none") {
+			s.borderRadius =
+				RADIUS[String(props.borderRadius)] ?? String(props.borderRadius);
+		}
+		if (props.shadow && props.shadow !== "none") {
+			s.boxShadow = SHADOW[String(props.shadow)] ?? String(props.shadow);
+		}
+		if (props.minHeight) s.minHeight = String(props.minHeight);
+
+		let videoHtml = "";
+		if (props.backgroundVideo) {
+			const videoWrapStyle = styleToString({
+				position: "absolute",
+				inset: "0",
+				overflow: "hidden",
+				pointerEvents: "none",
+			});
+			videoHtml = `<div class="kiv-section__video-bg" style="${videoWrapStyle}"><video autoplay muted loop playsinline src="${escapeHtml(props.backgroundVideo)}" style="width: 100%; height: 100%; object-fit: cover;"></video></div>`;
+		}
+
+		let blurHtml = "";
+		const blurAmount = BLUR[String(props.blur ?? "none")] ?? "0";
+		if (blurAmount !== "0") {
+			const blurStyle = styleToString({
+				position: "absolute",
+				inset: "0",
+				backdropFilter: `blur(${blurAmount})`,
+				pointerEvents: "none",
+				zIndex: "0",
+			});
+			blurHtml = `<div style="${blurStyle}"></div>`;
+		}
+
+		let overlayHtml = "";
+		if (props.overlay) {
+			const overlayStyle = styleToString({
+				position: "absolute",
+				inset: "0",
+				pointerEvents: "none",
+				background: String(props.overlayColor ?? "rgba(0,0,0,0.4)"),
+				opacity: String(props.overlayOpacity ?? 0.4),
+			});
+			overlayHtml = `<div class="kiv-section__overlay" style="${overlayStyle}"></div>`;
+		}
+
+		const contentStyle = styleToString({
+			position: "relative",
+			zIndex: "1",
+			display: "flex",
+			flexDirection: "column",
+			width: "100%",
+			flex: "1",
+			alignItems:
+				props.alignItems && props.alignItems !== "flex-start"
+					? String(props.alignItems)
+					: undefined,
+			justifyContent:
+				props.justifyContent && props.justifyContent !== "flex-start"
+					? String(props.justifyContent)
+					: undefined,
+		});
+
+		return `<section style="${styleToString(s)}" data-kiv-type="section" class="kiv-section">${videoHtml}${blurHtml}${overlayHtml}<div class="kiv-section__content" style="${contentStyle}">${children.default ?? ""}</div></section>`;
+	},
 	fields: {
 		// Background
 		background: f.color({

@@ -8,12 +8,12 @@ export interface I18nConfig {
 }
 
 export interface KivDocument {
-	/** Versión del schema. Habilita migraciones. NUNCA lo quites. */
+	/** Schema version. Enables migrations. NEVER remove it. */
 	schemaVersion: number;
-	/** Nodo raíz del árbol (normalmente un 'page'). */
+	/** Root node of the tree (normally a 'page'). */
 	root: KivNode;
-	/** Configuración de idiomas del documento. */
+	/** Document's language configuration. */
 	i18n: I18nConfig;
-	/** Overrides de theme a nivel de documento (opcional). */
+	/** Document-level theme overrides (optional). */
 	theme?: Record<string, unknown>;
 }

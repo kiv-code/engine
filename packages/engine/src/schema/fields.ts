@@ -35,7 +35,7 @@ function color(opts: BaseOptions<string> = {}): FieldDescriptor<string> {
 	return { schema: z.string(), control: "color", ...opts };
 }
 
-/** Select con opciones tipadas. Acepta valores sueltos o {label, value}. */
+/** Select with typed options. Accepts bare values or {label, value}. */
 function select<const T extends string | number>(
 	values: ReadonlyArray<T>,
 	opts: BaseOptions<T> = {},

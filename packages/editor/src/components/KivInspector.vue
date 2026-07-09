@@ -206,6 +206,35 @@ const hasResponsiveFields = computed(() =>
 		g.fields.some((f) => f.descriptor.responsive),
 	),
 );
+
+// ── Locked / visible toggles ────────────────────────────────────────────────
+const isNodeLocked = computed(() => store?.selected.value?.locked === true);
+
+const isNodeHiddenHere = computed(() => {
+	const node = store?.selected.value;
+	if (!node || node.visible === undefined) return false;
+	if (typeof node.visible === "boolean") return node.visible === false;
+	const ORDER = ["base", "sm", "md", "lg", "xl"] as const;
+	const obj = node.visible as unknown as Record<string, unknown>;
+	const target = ORDER.indexOf(fieldBreakpoint.value as (typeof ORDER)[number]);
+	for (let i = target; i >= 0; i--) {
+		const key = ORDER[i];
+		if (key && key in obj && obj[key] !== undefined) return obj[key] === false;
+	}
+	return false;
+});
+
+function toggleLocked() {
+	const node = store?.selected.value;
+	if (!node || !store) return;
+	store.setLocked(node.id, !isNodeLocked.value);
+}
+
+function toggleVisible() {
+	const node = store?.selected.value;
+	if (!node || !store) return;
+	store.setVisible(node.id, isNodeHiddenHere.value);
+}
 </script>
 
 <template>
@@ -227,6 +256,38 @@ const hasResponsiveFields = computed(() =>
 			<div class="kiv-inspector__node-header">
 				<span class="kiv-inspector__node-badge">{{ getNodeLabel(store.selected.value.type) }}</span>
 				<div class="kiv-inspector__node-actions">
+					<button
+						type="button"
+						class="kiv-inspector__action-btn"
+						:class="{ 'kiv-inspector__action-btn--active': isNodeLocked }"
+						:title="isNodeLocked ? 'Unlock node' : 'Lock node'"
+						@click="toggleLocked"
+					>
+						<svg v-if="isNodeLocked" width="13" height="13" viewBox="0 0 13 13" fill="none">
+							<rect x="3" y="6" width="7" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.2"/>
+							<path d="M4.5 6V4.2a2 2 0 0 1 4 0V6" stroke="currentColor" stroke-width="1.2"/>
+						</svg>
+						<svg v-else width="13" height="13" viewBox="0 0 13 13" fill="none">
+							<rect x="3" y="6" width="7" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.2"/>
+							<path d="M4.5 6V4.2a2 2 0 0 1 3.8-.9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+						</svg>
+					</button>
+					<button
+						type="button"
+						class="kiv-inspector__action-btn"
+						:class="{ 'kiv-inspector__action-btn--active': isNodeHiddenHere }"
+						:title="isNodeHiddenHere ? 'Show at this breakpoint' : 'Hide at this breakpoint'"
+						@click="toggleVisible"
+					>
+						<svg v-if="isNodeHiddenHere" width="13" height="13" viewBox="0 0 13 13" fill="none">
+							<path d="M1.5 6.5S3.8 2.5 6.5 2.5s5 4 5 4-2.3 4-5 4-5-4-5-4Z" stroke="currentColor" stroke-width="1.1"/>
+							<line x1="2" y1="11" x2="11" y2="2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+						</svg>
+						<svg v-else width="13" height="13" viewBox="0 0 13 13" fill="none">
+							<path d="M1.5 6.5S3.8 2.5 6.5 2.5s5 4 5 4-2.3 4-5 4-5-4-5-4Z" stroke="currentColor" stroke-width="1.1"/>
+							<circle cx="6.5" cy="6.5" r="1.6" stroke="currentColor" stroke-width="1.1"/>
+						</svg>
+					</button>
 					<button
 						type="button"
 						class="kiv-inspector__action-btn"
@@ -463,6 +524,10 @@ const hasResponsiveFields = computed(() =>
 .kiv-inspector__action-btn--danger:hover {
 	background: rgba(239, 68, 68, 0.15);
 	color: #f87171;
+}
+.kiv-inspector__action-btn--active {
+	background: var(--color-accent-muted);
+	color: var(--color-accent-light);
 }
 
 /* Responsive mini-switcher */

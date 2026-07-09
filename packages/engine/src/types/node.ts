@@ -1,18 +1,18 @@
 import type { Responsive } from "./values";
 
 export interface KivNode {
-	/** Identificador único dentro del documento. */
+	/** Unique identifier within the document. */
 	id: string;
-	/** Tipo registrado: 'section', 'heading', o uno custom como 'hero-banner'. */
+	/** Registered type: 'section', 'heading', or a custom one like 'hero-banner'. */
 	type: string;
-	/** Propiedades del nodo. El resolver las convierte en props planas. */
+	/** Node properties. The resolver converts them into flat props. */
 	props: Record<string, unknown>;
-	/** Hijos organizados por slot nombrado. */
+	/** Children organized by named slot. */
 	slots?: Record<string, KivNode[]>;
-	/** Datos de plugins. NO afecta al render. */
+	/** Plugin data. Does NOT affect rendering. */
 	meta?: Record<string, unknown>;
-	/** Si true, el editor bloquea la selección/edición/drag de este nodo. */
+	/** If true, the editor blocks selection/editing/dragging of this node. */
 	locked?: boolean;
-	/** Visibilidad del nodo, opcionalmente por breakpoint. Por defecto visible. */
+	/** Node visibility, optionally per breakpoint. Visible by default. */
 	visible?: Responsive<boolean>;
 }

@@ -10,27 +10,27 @@ const heading = defineNode({
 });
 
 describe("defineNode", () => {
-	it("compila un schema que valida props correctas", () => {
+	it("compiles a schema that validates correct props", () => {
 		const result = heading.schema.safeParse({ text: "Hola", level: "2" });
 		expect(result.success).toBe(true);
 	});
 
-	it("rechaza props inválidas", () => {
+	it("rejects invalid props", () => {
 		const result = heading.schema.safeParse({ level: "99" });
 		expect(result.success).toBe(false);
 	});
 
-	it("deriva defaults de los fields", () => {
+	it("derives defaults from the fields", () => {
 		expect(heading.defaults).toEqual({ level: 2 });
 	});
 
-	it("infiere el tipo de props", () => {
-		// Comprobación en tiempo de compilación: si esto compila, el tipo es correcto.
+	it("infers the props type", () => {
+		// Compile-time check: if this compiles, the type is correct.
 		const props: InferProps<typeof heading> = { text: "Hola", level: 3 };
 		expect(props.text).toBe("Hola");
 	});
 
-	it("pasa label, icon, description y slotConstraints al nodo compilado", () => {
+	it("passes label, icon, description and slotConstraints to the compiled node", () => {
 		const column = defineNode({
 			type: "column",
 			category: "layout",

@@ -1,22 +1,41 @@
 import { type ZodType, z } from "zod";
+import type { Breakpoint } from "../types";
 import type { FieldDescriptor } from "./field";
 
-/** Mapa de nombre de propiedad → su descriptor. */
+/** Map of property name → its descriptor. */
 export type FieldMap = Record<string, FieldDescriptor>;
+
+/** Minimal context passed to `toHtml`. Does not include `Registry` to avoid a schema↔registry cycle. */
+export interface ToHtmlContext {
+	locale: string;
+	breakpoint: Breakpoint;
+}
+
+/**
+ * Produces a node's HTML from its already-resolved props and its slots' HTML.
+ * `children` maps slot name → concatenated HTML of those children.
+ */
+export type ToHtml = (
+	props: Record<string, unknown>,
+	children: Record<string, string>,
+	ctx: ToHtmlContext,
+) => string;
 
 export interface NodeDefinition<F extends FieldMap = FieldMap> {
 	type: string;
 	fields: F;
-	/** Categoría para agrupar en el editor (opcional). */
+	/** Category for grouping in the editor (optional). */
 	category?: string;
-	/** Nombre legible mostrado en el árbol y la paleta. */
+	/** Human-readable name shown in the tree and palette. */
 	label?: string;
-	/** Identificador de ícono mostrado en el árbol y la paleta. */
+	/** Icon identifier shown in the tree and palette. */
 	icon?: string;
-	/** Descripción corta mostrada en la paleta. */
+	/** Short description shown in the palette. */
 	description?: string;
-	/** Restringe qué tipos de nodo puede recibir cada slot, e.g. `{ default: ["column"] }`. */
+	/** Restricts which node types each slot can receive, e.g. `{ default: ["column"] }`. */
 	slotConstraints?: Record<string, string[]>;
+	/** Optional static HTML renderer (SSR, email, PDF). Without this, `renderToHtml` uses a generic `<div>`. */
+	toHtml?: ToHtml;
 }
 
 export interface CompiledNode<F extends FieldMap = FieldMap> {
@@ -27,9 +46,10 @@ export interface CompiledNode<F extends FieldMap = FieldMap> {
 	icon?: string;
 	description?: string;
 	slotConstraints?: Record<string, string[]>;
-	/** Schema Zod que valida el objeto de props completo. */
+	toHtml?: ToHtml;
+	/** Zod schema that validates the full props object. */
 	schema: ZodType;
-	/** Props por defecto, derivadas de los `default` de cada field. */
+	/** Default props, derived from each field's `default`. */
 	defaults: Record<string, unknown>;
 }
 
@@ -54,12 +74,13 @@ export function defineNode<const F extends FieldMap>(
 		icon: def.icon,
 		description: def.description,
 		slotConstraints: def.slotConstraints,
+		toHtml: def.toHtml,
 		schema: z.object(shape),
 		defaults,
 	};
 }
 
-/** Extrae el tipo de props de un nodo compilado. */
+/** Extracts the props type of a compiled node. */
 export type InferProps<C> =
 	C extends CompiledNode<infer F>
 		? { [K in keyof F]?: F[K] extends FieldDescriptor<infer T> ? T : never }

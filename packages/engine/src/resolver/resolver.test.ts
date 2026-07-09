@@ -2,46 +2,46 @@ import { describe, expect, it } from "vitest";
 import { resolveLocalized, resolveProps, resolveResponsive } from "./index";
 
 describe("resolveResponsive", () => {
-	it("devuelve valores planos sin tocar", () => {
+	it("returns plain values untouched", () => {
 		expect(resolveResponsive(42, "lg")).toBe(42);
 	});
 
-	it("devuelve el valor del breakpoint exacto", () => {
+	it("returns the exact breakpoint's value", () => {
 		expect(resolveResponsive({ base: 16, md: 24, xl: 32 }, "md")).toBe(24);
 	});
 
-	it("hereda del breakpoint inferior más cercano (mobile-first)", () => {
-		// Pide lg, solo hay base y md → hereda md.
+	it("inherits from the nearest lower breakpoint (mobile-first)", () => {
+		// Requests lg, only base and md exist → inherits md.
 		expect(resolveResponsive({ base: 16, md: 24 }, "lg")).toBe(24);
 	});
 
-	it("cae a base si no hay nada por debajo", () => {
+	it("falls back to base if nothing below is defined", () => {
 		expect(resolveResponsive({ base: 16, xl: 48 }, "sm")).toBe(16);
 	});
 });
 
 describe("resolveLocalized", () => {
-	it("devuelve la traducción del locale activo", () => {
+	it("returns the active locale's translation", () => {
 		expect(resolveLocalized({ $t: { es: "Hola", en: "Hi" } }, "es")).toBe(
 			"Hola",
 		);
 	});
 
-	it("usa el fallback si el locale no existe", () => {
+	it("uses the fallback if the locale doesn't exist", () => {
 		expect(resolveLocalized({ $t: { en: "Hi" } }, "pt", "en")).toBe("Hi");
 	});
 
-	it("devuelve valores planos sin tocar", () => {
-		expect(resolveLocalized("plano", "es")).toBe("plano");
+	it("returns plain values untouched", () => {
+		expect(resolveLocalized("plain", "es")).toBe("plain");
 	});
 });
 
 describe("resolveProps", () => {
-	it("aplana ambos ejes en un nodo", () => {
+	it("flattens both axes on a node", () => {
 		const props = {
 			fontSize: { base: 16, lg: 32 },
 			text: { $t: { es: "Título", en: "Title" } },
-			static: "sin cambios",
+			static: "unchanged",
 		};
 		const out = resolveProps(props, {
 			breakpoint: "lg",
@@ -51,7 +51,7 @@ describe("resolveProps", () => {
 		expect(out).toEqual({
 			fontSize: 32,
 			text: "Título",
-			static: "sin cambios",
+			static: "unchanged",
 		});
 	});
 });

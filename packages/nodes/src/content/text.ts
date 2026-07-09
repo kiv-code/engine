@@ -1,8 +1,25 @@
 import { defineNode, f } from "@kiv/engine";
+import { escapeHtml, styleToString } from "../html-utils";
+import { LETTER_SPACING, LINE_HEIGHT } from "../scales";
 
 export const textNode = defineNode({
 	type: "text",
 	category: "content",
+	toHtml(props) {
+		const style = styleToString({
+			fontSize: `${props.size ?? 16}px`,
+			fontWeight: String(props.weight ?? "400"),
+			color: String(props.color ?? "inherit"),
+			textAlign: String(props.align ?? "left"),
+			lineHeight: LINE_HEIGHT[String(props.lineHeight ?? "relaxed")] ?? "1.6",
+			letterSpacing:
+				LETTER_SPACING[String(props.letterSpacing ?? "normal")] ?? "0em",
+			margin: "0",
+		});
+		const content =
+			props.content !== undefined ? escapeHtml(props.content) : "";
+		return `<p style="${style}" data-kiv-type="text">${content}</p>`;
+	},
 	fields: {
 		content: f.textarea({
 			label: "Content",

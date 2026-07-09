@@ -19,6 +19,7 @@ export {
 	renameNode,
 	type SelectionListener,
 	SelectionState,
+	setNodeFlags,
 	updateNodeProps,
 } from "./editor";
 export {
@@ -61,6 +62,7 @@ export type {
 	ToolbarButton,
 } from "./plugin";
 export { createRegistry, Registry } from "./registry";
+export { type RenderContext, type RenderOptions, renderToHtml } from "./render";
 export {
 	isLocalized,
 	isResponsive,
@@ -79,6 +81,8 @@ export {
 	f,
 	type InferProps,
 	type NodeDefinition,
+	type ToHtml,
+	type ToHtmlContext,
 } from "./schema";
 export type {
 	ApiClient,

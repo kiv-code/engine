@@ -1,8 +1,23 @@
 import { defineNode, f } from "@kiv/engine";
+import { styleToString } from "../html-utils";
+import { MAX_WIDTH, SPACING } from "../scales";
 
 export const containerNode = defineNode({
 	type: "container",
 	category: "layout",
+	toHtml(props, children) {
+		const style = styleToString({
+			maxWidth: MAX_WIDTH[String(props.maxWidth ?? "lg")] ?? "1024px",
+			marginLeft: props.centered !== false ? "auto" : undefined,
+			marginRight: props.centered !== false ? "auto" : undefined,
+			paddingLeft: SPACING[String(props.paddingX ?? "md")] ?? "16px",
+			paddingRight: SPACING[String(props.paddingX ?? "md")] ?? "16px",
+			paddingTop: SPACING[String(props.paddingY ?? "none")] ?? "0",
+			paddingBottom: SPACING[String(props.paddingY ?? "none")] ?? "0",
+			width: "100%",
+		});
+		return `<div style="${style}" data-kiv-type="container">${children.default ?? ""}</div>`;
+	},
 	fields: {
 		maxWidth: f.select(["xs", "sm", "md", "lg", "xl", "2xl", "full"], {
 			label: "Max width",

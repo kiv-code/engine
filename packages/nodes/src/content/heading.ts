@@ -1,8 +1,26 @@
 import { defineNode, f } from "@kiv/engine";
+import { escapeHtml, styleToString } from "../html-utils";
+import { HEADING_LEVEL_SIZE, LETTER_SPACING, LINE_HEIGHT } from "../scales";
 
 export const headingNode = defineNode({
 	type: "heading",
 	category: "content",
+	toHtml(props) {
+		const level = String(props.level ?? "2");
+		const style = styleToString({
+			fontSize: `${props.size ?? HEADING_LEVEL_SIZE[level] ?? 36}px`,
+			fontWeight: String(props.weight ?? "700"),
+			color: String(props.color ?? "inherit"),
+			textAlign: String(props.align ?? "left"),
+			lineHeight: LINE_HEIGHT[String(props.lineHeight ?? "normal")] ?? "1.4",
+			letterSpacing:
+				LETTER_SPACING[String(props.letterSpacing ?? "normal")] ?? "0em",
+			textTransform: String(props.transform ?? "none"),
+			margin: "0",
+		});
+		const text = props.text !== undefined ? escapeHtml(props.text) : "";
+		return `<h${level} style="${style}" data-kiv-type="heading">${text}</h${level}>`;
+	},
 	fields: {
 		text: f.text({
 			label: "Text",

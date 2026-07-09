@@ -7,15 +7,15 @@ export interface ResolveContext {
 	fallbackLocale?: string;
 }
 
-/** Aplana las props de un nodo según breakpoint y locale activos. */
+/** Flattens a node's props according to the active breakpoint and locale. */
 export function resolveProps(
 	props: Record<string, unknown>,
 	ctx: ResolveContext,
 ): Record<string, unknown> {
 	const out: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(props)) {
-		// Primero el eje responsive, luego el locale. No se solapan en la práctica,
-		// pero aplicarlos en cadena es seguro: si no aplica un eje, pasa el valor tal cual.
+		// Responsive axis first, then locale. They don't overlap in practice,
+		// but chaining them is safe: if an axis doesn't apply, the value passes through unchanged.
 		const afterResponsive = resolveResponsive(value, ctx.breakpoint);
 		out[key] = resolveLocalized(
 			afterResponsive,
@@ -26,7 +26,7 @@ export function resolveProps(
 	return out;
 }
 
-/** Resuelve un nodo entero (sin tocar sus slots; eso lo hace el renderer al recorrer). */
+/** Resolves an entire node (without touching its slots; the renderer does that while traversing). */
 export function resolveNode(node: KivNode, ctx: ResolveContext) {
 	return {
 		id: node.id,

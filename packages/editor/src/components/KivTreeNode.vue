@@ -14,6 +14,7 @@ const allChildren = (node: KivNode): KivNode[] =>
 // Reactive — recomputes when store.document changes (after move/add/remove)
 const children = computed(() => allChildren(props.node));
 const collapsed = ref(false);
+const isLocked = computed(() => props.node.locked === true);
 
 // ── DnD ──────────────────────────────────────────────────────────────────────
 const dropZone = ref<"before" | "inside" | "after" | null>(null);
@@ -48,7 +49,8 @@ function onDrop(e: DragEvent) {
 	e.preventDefault();
 	const draggedId = e.dataTransfer?.getData("text/plain");
 	dropZone.value = null;
-	if (!draggedId || draggedId === props.node.id || !store) return;
+	if (!draggedId || draggedId === props.node.id || !store || isLocked.value)
+		return;
 
 	function isDescendant(parent: KivNode, targetId: string): boolean {
 		return allChildren(parent).some(
@@ -97,7 +99,7 @@ function onDrop(e: DragEvent) {
 
 // ── Context actions ───────────────────────────────────────────────────────────
 function moveNode(direction: "up" | "down") {
-	if (!store) return;
+	if (!store || isLocked.value) return;
 	const doc = store.document.value;
 	function findParent(
 		current: KivNode,
@@ -137,7 +139,7 @@ const hasChildren = computed(() => children.value.length > 0);
 				'ktn__row--drop-inside': dropZone === 'inside',
 			}"
 			:style="{ paddingLeft: `${8 + (depth ?? 0) * 14}px` }"
-			draggable="true"
+			:draggable="!isLocked"
 			@click="store?.select(node.id)"
 			@dragstart="onDragStart"
 			@dragend="onDragEnd"
@@ -173,16 +175,34 @@ const hasChildren = computed(() => children.value.length > 0);
 
 			<span class="ktn__icon"><NodeIcon :type="node.type" :size="13" /></span>
 			<span class="ktn__type">{{ getNodeLabel(node.type) }}</span>
+			<span v-if="isLocked" class="ktn__lock" title="Locked">
+				<svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+					<rect x="1.5" y="4" width="6" height="4" rx="1" stroke="currentColor" stroke-width="1.1"/>
+					<path d="M2.5 4V2.8a2 2 0 0 1 4 0V4" stroke="currentColor" stroke-width="1.1"/>
+				</svg>
+			</span>
 			<span v-if="hasChildren && collapsed" class="ktn__count">{{ children.length }}</span>
 
 			<!-- Context actions (visible on hover / selected) -->
 			<div class="ktn__actions" @click.stop>
-				<button type="button" class="ktn__action" title="Move up" @click="moveNode('up')">
+				<button
+					type="button"
+					class="ktn__action"
+					title="Move up"
+					:disabled="isLocked"
+					@click="moveNode('up')"
+				>
 					<svg width="9" height="9" viewBox="0 0 9 9" fill="none">
 						<path d="M4.5 7V2M2 4.5l2.5-2.5 2.5 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
 					</svg>
 				</button>
-				<button type="button" class="ktn__action" title="Move down" @click="moveNode('down')">
+				<button
+					type="button"
+					class="ktn__action"
+					title="Move down"
+					:disabled="isLocked"
+					@click="moveNode('down')"
+				>
 					<svg width="9" height="9" viewBox="0 0 9 9" fill="none">
 						<path d="M4.5 2v5M2 4.5l2.5 2.5 2.5-2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
 					</svg>
@@ -191,6 +211,7 @@ const hasChildren = computed(() => children.value.length > 0);
 					type="button"
 					class="ktn__action ktn__action--danger"
 					title="Delete"
+					:disabled="isLocked"
 					@click="store?.removeNode(node.id)"
 				>
 					<svg width="9" height="9" viewBox="0 0 9 9" fill="none">
@@ -309,6 +330,12 @@ const hasChildren = computed(() => children.value.length > 0);
 	text-align: center;
 	flex-shrink: 0;
 }
+.ktn__lock {
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
+	color: var(--color-text-muted);
+}
 
 /* Context actions — hidden by default, visible on hover/selected */
 .ktn__actions {
@@ -338,6 +365,14 @@ const hasChildren = computed(() => children.value.length > 0);
 .ktn__action:hover {
 	background: rgba(255,255,255,0.08);
 	color: var(--color-text-primary);
+}
+.ktn__action:disabled {
+	opacity: 0.3;
+	cursor: default;
+}
+.ktn__action:disabled:hover {
+	background: none;
+	color: var(--color-text-muted);
 }
 .ktn__action--danger:hover {
 	background: rgba(239, 68, 68, 0.15);

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Breakpoint } from "@kiv/engine";
+import { findNode } from "@kiv/engine";
 import type { VueRegistry } from "@kiv/vue";
 import { KivRenderer } from "@kiv/vue";
 import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
@@ -13,6 +14,11 @@ const store = inject(EDITOR_STORE_KEY);
 const canvasRef = ref<HTMLElement | null>(null);
 const stageRef = ref<HTMLElement | null>(null);
 const hoveredId = ref<string | null>(null);
+
+function isLocked(id: string): boolean {
+	if (!store) return false;
+	return findNode(store.document.value, id)?.node.locked === true;
+}
 
 const breakpoint = computed<Breakpoint>(
 	() => (store?.breakpoint.value ?? "base") as Breakpoint,
@@ -48,8 +54,18 @@ function onCanvasClick(e: MouseEvent) {
 		"[data-kiv-node-id]",
 	) as HTMLElement | null;
 	const id = target?.dataset.kivNodeId ?? null;
+	if (id && isLocked(id)) return;
 	store?.select(id);
 	if (!id) deactivate();
+}
+
+function onCanvasDblClickGuarded(e: MouseEvent) {
+	const target = (e.target as HTMLElement).closest(
+		"[data-kiv-node-id]",
+	) as HTMLElement | null;
+	const id = target?.dataset.kivNodeId;
+	if (id && isLocked(id)) return;
+	onCanvasDblClick(e);
 }
 
 function onCanvasMouseMove(e: MouseEvent) {
@@ -118,13 +134,23 @@ function onKeydown(e: KeyboardEvent) {
 		return;
 
 	const selected = store?.selected.value;
+	const selectedLocked = selected ? isLocked(selected.id) : false;
 
-	if ((e.key === "Delete" || e.key === "Backspace") && selected) {
+	if (
+		(e.key === "Delete" || e.key === "Backspace") &&
+		selected &&
+		!selectedLocked
+	) {
 		e.preventDefault();
 		store?.removeNode(selected.id);
 		return;
 	}
-	if (e.key === "d" && (e.metaKey || e.ctrlKey) && selected) {
+	if (
+		e.key === "d" &&
+		(e.metaKey || e.ctrlKey) &&
+		selected &&
+		!selectedLocked
+	) {
 		e.preventDefault();
 		store?.duplicateNode(selected.id);
 		return;
@@ -176,7 +202,7 @@ watch(
 	<div
 		class="kiv-canvas"
 		@click.stop="onCanvasClick"
-		@dblclick.stop="onCanvasDblClick"
+		@dblclick.stop="onCanvasDblClickGuarded"
 		@mousemove="onCanvasMouseMove"
 		@mouseleave="onCanvasMouseLeave"
 	>

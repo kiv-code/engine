@@ -1,8 +1,91 @@
 import { defineNode, f } from "@kiv/engine";
+import { escapeHtml, styleToString } from "../html-utils";
+import {
+	BUTTON_RADIUS,
+	BUTTON_SIZE,
+	BUTTON_VARIANT,
+	type ButtonSizeStyle,
+	type ButtonVariantStyle,
+} from "../scales";
+
+const DEFAULT_SIZE: ButtonSizeStyle = { padding: "9px 20px", fontSize: "14px" };
+const DEFAULT_VARIANT: ButtonVariantStyle = {
+	background: "#6366f1",
+	color: "#ffffff",
+	border: "2px solid transparent",
+};
 
 export const buttonNode = defineNode({
 	type: "button",
 	category: "content",
+	toHtml(props) {
+		const variant =
+			BUTTON_VARIANT[String(props.variant ?? "primary")] ?? DEFAULT_VARIANT;
+		const sizing = BUTTON_SIZE[String(props.size ?? "md")] ?? DEFAULT_SIZE;
+		const icon = typeof props.icon === "string" ? props.icon.trim() : "";
+		const hasIcon = icon.length > 0;
+		const iconIsSvg = hasIcon && icon.startsWith("<");
+
+		let background = (props.customBackground as string) || variant.background;
+		if (props.backgroundType === "gradient") {
+			const angle = props.gradientAngle ?? 135;
+			const from = (props.gradientFrom as string) || "#6366f1";
+			const to = (props.gradientTo as string) || "#a855f7";
+			const middle =
+				typeof props.gradientMiddle === "string"
+					? props.gradientMiddle.trim()
+					: "";
+			const stops = middle ? `${from}, ${middle}, ${to}` : `${from}, ${to}`;
+			background = `linear-gradient(${angle}deg, ${stops})`;
+		}
+		const color = (props.customColor as string) || variant.color;
+		const border = props.customBorderColor
+			? `2px solid ${props.customBorderColor}`
+			: variant.border;
+
+		const style = styleToString({
+			display: hasIcon ? "inline-flex" : "inline-block",
+			alignItems: hasIcon ? "center" : undefined,
+			justifyContent: hasIcon ? "center" : undefined,
+			gap: hasIcon ? "0.5em" : undefined,
+			width: props.fullWidth ? "100%" : undefined,
+			padding: variant.textDecoration ? "0" : sizing.padding,
+			fontSize: sizing.fontSize,
+			fontWeight: String(props.fontWeight ?? "600"),
+			fontFamily: "inherit",
+			textAlign: String(props.align ?? "center"),
+			borderRadius: BUTTON_RADIUS[String(props.borderRadius ?? "md")] ?? "6px",
+			textDecoration: variant.textDecoration ?? "none",
+			lineHeight: "1",
+			whiteSpace: "nowrap",
+			background,
+			color,
+			border,
+		});
+
+		const href = escapeHtml(props.href ?? "#");
+		const target =
+			props.linkType === "external"
+				? "_blank"
+				: String(props.target ?? "_self");
+		const rel = target === "_blank" ? ' rel="noopener noreferrer"' : "";
+
+		const iconHtml = hasIcon
+			? iconIsSvg
+				? `<span class="kiv-btn-icon">${icon}</span>`
+				: `<i class="${escapeHtml(icon)} kiv-btn-icon" aria-hidden="true"></i>`
+			: "";
+		const label =
+			props.label !== undefined
+				? `<span>${escapeHtml(props.label)}</span>`
+				: "";
+		const inner =
+			props.iconPosition === "right"
+				? `${label}${iconHtml}`
+				: `${iconHtml}${label}`;
+
+		return `<a href="${href}" target="${escapeHtml(target)}"${rel} style="${style}" data-kiv-type="button">${inner}</a>`;
+	},
 	fields: {
 		label: f.text({
 			label: "Label",

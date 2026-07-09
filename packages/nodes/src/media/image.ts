@@ -1,8 +1,25 @@
 import { defineNode, f } from "@kiv/engine";
+import { escapeHtml, styleToString } from "../html-utils";
+import { RADIUS, SHADOW } from "../scales";
 
 export const imageNode = defineNode({
 	type: "image",
 	category: "media",
+	toHtml(props) {
+		const style = styleToString({
+			objectFit: String(props.fit ?? "cover"),
+			aspectRatio:
+				props.aspectRatio !== "auto" ? String(props.aspectRatio) : undefined,
+			width: String(props.width ?? "100%"),
+			maxWidth: "100%",
+			display: "block",
+			borderRadius: RADIUS[String(props.borderRadius ?? "none")] ?? "0",
+			boxShadow: SHADOW[String(props.shadow ?? "none")] ?? "none",
+		});
+		const src = escapeHtml(props.src ?? "");
+		const alt = escapeHtml(props.alt ?? "");
+		return `<img src="${src}" alt="${alt}" style="${style}" data-kiv-type="image" />`;
+	},
 	fields: {
 		src: f.text({ label: "Source URL", group: "Content" }),
 		alt: f.text({ label: "Alt text", localizable: true, group: "Content" }),

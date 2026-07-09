@@ -8,26 +8,26 @@ const heading = defineNode({
 });
 
 describe("Registry", () => {
-	it("registra y recupera un nodo", () => {
+	it("registers and retrieves a node", () => {
 		const reg = createRegistry();
 		reg.register(heading);
 		expect(reg.get("heading")).toBe(heading);
 		expect(reg.has("heading")).toBe(true);
 	});
 
-	it("devuelve undefined para tipos no registrados", () => {
+	it("returns undefined for unregistered types", () => {
 		const reg = createRegistry();
-		expect(reg.get("inexistente")).toBeUndefined();
-		expect(reg.has("inexistente")).toBe(false);
+		expect(reg.get("nonexistent")).toBeUndefined();
+		expect(reg.has("nonexistent")).toBe(false);
 	});
 
-	it("lanza al registrar un tipo duplicado", () => {
+	it("throws when registering a duplicate type", () => {
 		const reg = createRegistry();
 		reg.register(heading);
-		expect(() => reg.register(heading)).toThrow(/ya está registrado/);
+		expect(() => reg.register(heading)).toThrow(/is already registered/);
 	});
 
-	it("lista los tipos registrados", () => {
+	it("lists registered types", () => {
 		const reg = createRegistry();
 		reg.registerMany([heading]);
 		expect(reg.types()).toEqual(["heading"]);

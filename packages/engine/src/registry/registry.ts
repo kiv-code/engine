@@ -3,45 +3,45 @@ import type { CompiledNode } from "../schema";
 export class Registry {
 	private nodes = new Map<string, CompiledNode>();
 
-	/** Registra un nodo. Lanza si el tipo ya existe (evita sobrescrituras silenciosas). */
+	/** Registers a node. Throws if the type already exists (avoids silent overwrites). */
 	register(node: CompiledNode): void {
 		if (this.nodes.has(node.type)) {
 			throw new Error(
-				`[kiv] El tipo de nodo "${node.type}" ya está registrado.`,
+				`[kiv] The node type "${node.type}" is already registered.`,
 			);
 		}
 		this.nodes.set(node.type, node);
 	}
 
-	/** Registra varios nodos de una vez (para presets). */
+	/** Registers several nodes at once (for presets). */
 	registerMany(nodes: CompiledNode[]): void {
 		for (const node of nodes) {
 			this.register(node);
 		}
 	}
 
-	/** Devuelve la definición de un tipo, o undefined si no existe. */
+	/** Returns the definition of a type, or undefined if it doesn't exist. */
 	get(type: string): CompiledNode | undefined {
 		return this.nodes.get(type);
 	}
 
-	/** Indica si un tipo está registrado. */
+	/** Indicates whether a type is registered. */
 	has(type: string): boolean {
 		return this.nodes.has(type);
 	}
 
-	/** Lista todos los tipos registrados (útil para el editor). */
+	/** Lists all registered types (useful for the editor). */
 	types(): string[] {
 		return [...this.nodes.keys()];
 	}
 
-	/** Lista todas las definiciones (para construir la paleta del editor). */
+	/** Lists all definitions (to build the editor's palette). */
 	all(): CompiledNode[] {
 		return [...this.nodes.values()];
 	}
 }
 
-/** Crea un registry vacío. */
+/** Creates an empty registry. */
 export function createRegistry(): Registry {
 	return new Registry();
 }

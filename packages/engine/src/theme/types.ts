@@ -8,7 +8,7 @@ export interface ThemeTokens {
 	shadow: Record<string, string>;
 }
 
-/** Override parcial: el usuario solo define lo que quiere cambiar. */
+/** Partial override: the user only defines what they want to change. */
 export type ThemeOverride = {
 	[K in keyof ThemeTokens]?: Partial<ThemeTokens[K]>;
 };

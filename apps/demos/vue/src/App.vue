@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { KivEditor } from "@kiv/editor";
-import type { Breakpoint, KivDocument } from "@kiv/engine";
-import { createEngine } from "@kiv/engine";
+import type { Breakpoint, KivDocument, KivPlugin } from "@kiv/engine";
+import { createEngine, renderToHtml } from "@kiv/engine";
 import { ALL_NODES } from "@kiv/nodes";
 import {
 	type AnalyticsEvent,
@@ -13,13 +13,33 @@ import { createDefaultVueRegistry, KivRenderer } from "@kiv/vue";
 import { computed, onBeforeUnmount, ref, shallowRef } from "vue";
 import { demoDocument } from "./demo-document";
 import { clearPage, loadPage, savePage } from "./persistence";
+import { localStorageService, mockMediaProvider } from "./services";
 
 // Two independent plugins listening on the same bus — proves the flow.
 const events = shallowRef<AnalyticsEvent[]>([]);
 const clickCounts = shallowRef<ClickCounts>({});
 
+// Plugin 3 — uses ctx.services.storage + ctx.bus to prove the editor's
+// mutation events and the injected services reach a plugin's install(ctx).
+const storageLog = shallowRef<string[]>([]);
+const storageLogPlugin: KivPlugin = {
+	name: "storage-log",
+	install(ctx) {
+		ctx.bus.on("node.propsChanged", (payload) => {
+			const count = (ctx.services.storage?.get<number>("edits") ?? 0) + 1;
+			ctx.services.storage?.set("edits", count);
+			storageLog.value = [
+				`#${count} · node "${payload.id}" saved via ctx.services.storage`,
+				...storageLog.value,
+			].slice(0, 20);
+		});
+	},
+};
+
 const engine = createEngine({
 	nodes: [...ALL_NODES],
+	services: { storage: localStorageService },
+	media: { provider: mockMediaProvider },
 	plugins: [
 		// Plugin 1 — captures EVERY event via the "*" wildcard.
 		analyticsPlugin({
@@ -33,6 +53,7 @@ const engine = createEngine({
 				clickCounts.value = counts;
 			},
 		}),
+		storageLogPlugin,
 	],
 });
 
@@ -112,6 +133,19 @@ function resetToDemo() {
 function clearEvents() {
 	events.value = [];
 }
+
+// Export the current document to static HTML via renderToHtml() — each node
+// type's own toHtml() renders itself; unregistered types fall back to a div.
+function exportHtml() {
+	const body = renderToHtml(doc.value, {
+		registry: engine.registry,
+		locale: previewLocale.value,
+		breakpoint: previewBreakpoint.value,
+	});
+	const html = `<!doctype html>\n<html lang="${doc.value.i18n.default}">\n<head><meta charset="utf-8"><title>Kiv export</title></head>\n<body>${body}</body>\n</html>`;
+	const blob = new Blob([html], { type: "text/html" });
+	window.open(URL.createObjectURL(blob), "_blank");
+}
 </script>
 
 <template>
@@ -139,6 +173,7 @@ function clearEvents() {
 				<template v-else-if="saveState === 'saved'">✓ Saved</template>
 				<template v-else>Autosave on</template>
 			</span>
+			<button type="button" class="demo-reset" @click="exportHtml">Export HTML</button>
 			<button type="button" class="demo-reset" @click="resetToDemo">Reset</button>
 
 			<div v-if="mode === 'preview'" class="demo-bar__locales">
@@ -158,6 +193,7 @@ function clearEvents() {
 				:document="doc"
 				:registry="engine.registry"
 				:vue-registry="vueRegistry"
+				:bus="engine.bus"
 				title="Kiv Demo"
 				@update:document="onDocumentUpdate"
 			/>
@@ -215,6 +251,22 @@ function clearEvents() {
 						<li v-for="(e, i) in events" :key="i" class="demo-events__item">
 							<span class="demo-events__name">{{ e.event }}</span>
 							<code class="demo-events__payload">{{ JSON.stringify(e.payload) }}</code>
+						</li>
+					</ul>
+				</div>
+
+				<!-- Plugin 3: storage-log (ctx.services.storage + ctx.bus) -->
+				<div class="demo-panel">
+					<div class="demo-panel__title">
+						<span class="demo-panel__dot demo-panel__dot--storage" />
+						storage-log · edit in the Editor tab to see it react
+					</div>
+					<ul class="demo-events__list">
+						<li v-if="!storageLog.length" class="demo-events__empty">
+							No edits saved yet.
+						</li>
+						<li v-for="(line, i) in storageLog" :key="i" class="demo-events__item">
+							<span class="demo-events__payload">{{ line }}</span>
 						</li>
 					</ul>
 				</div>
@@ -441,6 +493,9 @@ body {
 }
 .demo-panel__dot--events {
 	background: #34d399;
+}
+.demo-panel__dot--storage {
+	background: #818cf8;
 }
 
 /* Click counts (plugin 2) */

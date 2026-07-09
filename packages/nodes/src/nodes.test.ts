@@ -34,6 +34,16 @@ describe("ALL_NODES", () => {
 			expect(node.category).toBeDefined();
 		}
 	});
+
+	it("every node's defaults satisfy its own compiled schema", () => {
+		for (const node of ALL_NODES) {
+			const result = node.schema.safeParse(node.defaults);
+			expect(
+				result.success,
+				`${node.type}: ${JSON.stringify(result.error?.issues)}`,
+			).toBe(true);
+		}
+	});
 });
 
 describe("layout nodes", () => {
@@ -129,5 +139,65 @@ describe("node schemas", () => {
 			level: "1",
 		});
 		expect(result.success).toBe(true);
+	});
+});
+
+describe("toHtml", () => {
+	const ctx = { locale: "en", breakpoint: "base" as const };
+
+	it("every node renders non-empty HTML from its own defaults", () => {
+		for (const node of ALL_NODES) {
+			const html = node.toHtml?.(node.defaults, {}, ctx);
+			expect(html, `${node.type} has no toHtml`).toBeDefined();
+			expect(html?.trim().length ?? 0, node.type).toBeGreaterThan(0);
+			expect(html, node.type).toContain(`data-kiv-type="${node.type}"`);
+		}
+	});
+
+	it("heading renders the requested tag and escapes text", () => {
+		const html = headingNode.toHtml?.(
+			{ text: "<script>alert(1)</script>", level: "3" },
+			{},
+			ctx,
+		);
+		expect(html).toContain("<h3");
+		expect(html).not.toContain("<script>");
+		expect(html).toContain("&lt;script&gt;");
+	});
+
+	it("container centers by default and stops centering when centered is false", () => {
+		const centered = containerNode.toHtml?.({}, {}, ctx);
+		expect(centered).toContain("margin-left: auto");
+
+		const uncentered = containerNode.toHtml?.({ centered: false }, {}, ctx);
+		expect(uncentered).not.toContain("margin-left");
+	});
+
+	it("section renders the overlay div only when enabled", () => {
+		const withOverlay = sectionNode.toHtml?.(
+			{ overlay: true, overlayColor: "rgba(1,2,3,0.5)" },
+			{},
+			ctx,
+		);
+		expect(withOverlay).toContain("kiv-section__overlay");
+
+		const withoutOverlay = sectionNode.toHtml?.({}, {}, ctx);
+		expect(withoutOverlay).not.toContain("kiv-section__overlay");
+	});
+
+	it("button renders an anchor with the variant background", () => {
+		const html = buttonNode.toHtml?.(
+			{ label: "Go", href: "/pricing", variant: "secondary" },
+			{},
+			ctx,
+		);
+		expect(html).toContain('<a href="/pricing"');
+		expect(html).toContain("Go");
+		expect(html).toContain("--kiv-color-secondary");
+	});
+
+	it("container nests its children inside the wrapper div", () => {
+		const html = containerNode.toHtml?.({}, { default: "<p>Hi</p>" }, ctx);
+		expect(html).toContain("<p>Hi</p>");
 	});
 });

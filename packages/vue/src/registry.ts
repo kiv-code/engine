@@ -12,7 +12,7 @@ class VueRegistryImpl implements VueRegistry {
 	register(type: string, component: Component): void {
 		if (this.components.has(type)) {
 			throw new Error(
-				`[kiv/vue] El tipo de nodo "${type}" ya está registrado.`,
+				`[kiv/vue] The node type "${type}" is already registered.`,
 			);
 		}
 		this.components.set(type, component);

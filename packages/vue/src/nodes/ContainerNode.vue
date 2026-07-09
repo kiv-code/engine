@@ -2,17 +2,20 @@
 import { MAX_WIDTH, SPACING } from "@kiv/nodes";
 import { computed } from "vue";
 
-const props = defineProps<{
-	maxWidth?: string;
-	paddingX?: string;
-	paddingY?: string;
-	centered?: boolean;
-}>();
+const props = withDefaults(
+	defineProps<{
+		maxWidth?: string;
+		paddingX?: string;
+		paddingY?: string;
+		centered?: boolean;
+	}>(),
+	{ centered: true },
+);
 
 const containerStyle = computed(() => ({
 	maxWidth: MAX_WIDTH[props.maxWidth ?? "lg"] ?? "1024px",
-	marginLeft: props.centered !== false ? "auto" : undefined,
-	marginRight: props.centered !== false ? "auto" : undefined,
+	marginLeft: props.centered ? "auto" : undefined,
+	marginRight: props.centered ? "auto" : undefined,
 	paddingLeft: SPACING[props.paddingX ?? "md"] ?? "16px",
 	paddingRight: SPACING[props.paddingX ?? "md"] ?? "16px",
 	paddingTop: SPACING[props.paddingY ?? "none"] ?? "0",

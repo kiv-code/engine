@@ -1,6 +1,6 @@
 import type { ZodType } from "zod";
 
-/** Qué control muestra el inspector para este field. */
+/** Which control the inspector shows for this field. */
 export type FieldControl =
 	| "text"
 	| "textarea"
@@ -9,39 +9,39 @@ export type FieldControl =
 	| "boolean"
 	| "color";
 
-/** Descriptor de una propiedad de un nodo. */
+/** Descriptor of a node's property. */
 export interface FieldDescriptor<T = unknown> {
-	/** Validador Zod del valor base (sin envolver en responsive/locale). */
+	/** Zod validator for the base value (not wrapped in responsive/locale). */
 	schema: ZodType;
-	/** Control que el inspector renderiza. */
+	/** Control that the inspector renders. */
 	control: FieldControl;
-	/** Valor por defecto al crear el nodo. */
+	/** Default value when creating the node. */
 	default?: T;
-	/** Etiqueta visible en el inspector. */
+	/** Label visible in the inspector. */
 	label?: string;
-	/** Grupo/sección en el inspector (e.g. "Layout", "Typography", "Background"). */
+	/** Group/section in the inspector (e.g. "Layout", "Typography", "Background"). */
 	group?: string;
-	/** Si true, el valor puede traducirse por locale. */
+	/** If true, the value can be translated per locale. */
 	localizable?: boolean;
-	/** Si true, el valor puede variar por breakpoint. */
+	/** If true, the value can vary per breakpoint. */
 	responsive?: boolean;
-	/** Opciones, solo para control 'select'. */
+	/** Options, only for the 'select' control. */
 	options?: ReadonlyArray<{ label: string; value: T }>;
-	/** Si true, el campo puede editarse inline en el canvas (click directo sobre el nodo). */
+	/** If true, the field can be edited inline on the canvas (click directly on the node). */
 	inline?: boolean;
 	/**
-	 * Visibilidad condicional en el inspector: el campo solo se muestra si el
-	 * prop `field` del nodo es igual a alguno de `equals`. Permite formularios
-	 * dinámicos (e.g. mostrar campos de gradiente solo si backgroundType=gradient).
-	 * No afecta al render ni al JSON — es puramente una pista para el inspector.
+	 * Conditional visibility in the inspector: the field is only shown if the
+	 * node's `field` prop equals one of `equals`. Enables dynamic forms
+	 * (e.g. showing gradient fields only if backgroundType=gradient).
+	 * Does not affect rendering or the JSON — it's purely a hint for the inspector.
 	 */
 	showIf?: { field: string; equals: string | string[] };
-	/** Texto de ejemplo mostrado en el control cuando está vacío. */
+	/** Placeholder text shown in the control when empty. */
 	placeholder?: string;
-	/** Texto de ayuda mostrado debajo del control en el inspector. */
+	/** Helper text shown below the control in the inspector. */
 	hint?: string;
-	/** Marca el campo como obligatorio (pista visual para el inspector). */
+	/** Marks the field as required (visual hint for the inspector). */
 	required?: boolean;
-	/** Oculta el campo del inspector (para props de sistema). */
+	/** Hides the field from the inspector (for system props). */
 	hidden?: boolean;
 }

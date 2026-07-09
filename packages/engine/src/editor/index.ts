@@ -8,6 +8,7 @@ export {
 	nodeIdExists,
 	removeNode,
 	renameNode,
+	setNodeFlags,
 	updateNodeProps,
 } from "./document-ops";
 export { EditorEngine } from "./editor-engine";

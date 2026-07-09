@@ -1,8 +1,30 @@
 import { defineNode, f } from "@kiv/engine";
+import { styleToString } from "../html-utils";
+import { SPACING } from "../scales";
 
 export const columnNode = defineNode({
 	type: "column",
 	category: "layout",
+	toHtml(props, children) {
+		const s: Record<string, string | undefined> = {};
+		if (props.span && props.span !== "auto")
+			s.gridColumn = `span ${props.span}`;
+		if (props.offset && props.offset !== "0")
+			s.gridColumnStart = String(Number(props.offset) + 1);
+		if (props.alignSelf && props.alignSelf !== "auto")
+			s.alignSelf = String(props.alignSelf);
+		const px = SPACING[String(props.paddingX ?? "none")] ?? "0";
+		const py = SPACING[String(props.paddingY ?? "none")] ?? "0";
+		if (px !== "0") {
+			s.paddingLeft = px;
+			s.paddingRight = px;
+		}
+		if (py !== "0") {
+			s.paddingTop = py;
+			s.paddingBottom = py;
+		}
+		return `<div style="${styleToString(s)}" data-kiv-type="column">${children.default ?? ""}</div>`;
+	},
 	fields: {
 		span: f.select(
 			["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "auto"],

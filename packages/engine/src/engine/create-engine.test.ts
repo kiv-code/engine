@@ -128,7 +128,7 @@ describe("createEngine", () => {
 		const plugin: KivPlugin = { name: "dupe", install: vi.fn() };
 		engine.use(plugin);
 		expect(() => engine.use(plugin)).toThrow(
-			'El plugin "dupe" ya está instalado',
+			'The plugin "dupe" is already installed',
 		);
 	});
 

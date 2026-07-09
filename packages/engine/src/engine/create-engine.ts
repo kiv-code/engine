@@ -51,7 +51,9 @@ export function createEngine(options: CreateEngineOptions = {}): KivEngine {
 
 	function use(plugin: KivPlugin): void {
 		if (installed.has(plugin.name)) {
-			throw new Error(`[kiv] El plugin "${plugin.name}" ya está instalado.`);
+			throw new Error(
+				`[kiv] The plugin "${plugin.name}" is already installed.`,
+			);
 		}
 		const ctx: PluginContext = {
 			bus,

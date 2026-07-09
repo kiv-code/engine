@@ -1,6 +1,6 @@
 import type { KivDocument, KivNode } from "@kiv/engine";
-import { createRegistry } from "@kiv/engine";
-import { describe, expect, it } from "vitest";
+import { createEventBus, createRegistry } from "@kiv/engine";
+import { describe, expect, it, vi } from "vitest";
 import { useEditorStore } from "./editor-store";
 
 const registry = createRegistry();
@@ -110,5 +110,37 @@ describe("useEditorStore", () => {
 		const store = useEditorStore(makeDoc(), registry);
 		store.undo();
 		expect(store.document.value.root.id).toBe("root");
+	});
+
+	it("setLocked toggles a node's locked flag", () => {
+		const store = useEditorStore(makeDoc(), registry);
+		store.setLocked("heading-1", true);
+		const heading =
+			store.document.value.root.slots?.default?.[0]?.slots?.default?.[0];
+		expect(heading?.locked).toBe(true);
+		store.setLocked("heading-1", false);
+		const updated =
+			store.document.value.root.slots?.default?.[0]?.slots?.default?.[0];
+		expect(updated?.locked).toBe(false);
+	});
+
+	it("setVisible sets a node's visible flag", () => {
+		const store = useEditorStore(makeDoc(), registry);
+		store.setVisible("heading-1", false);
+		const heading =
+			store.document.value.root.slots?.default?.[0]?.slots?.default?.[0];
+		expect(heading?.visible).toBe(false);
+	});
+
+	it("forwards editor mutations onto a shared bus when provided", () => {
+		const bus = createEventBus();
+		const handler = vi.fn();
+		bus.on("node.propsChanged", handler);
+		const store = useEditorStore(makeDoc(), registry, { bus });
+		store.updateProps("heading-1", { text: "Hi" });
+		expect(handler).toHaveBeenCalledWith({
+			id: "heading-1",
+			patch: { text: "Hi" },
+		});
 	});
 });

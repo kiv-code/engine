@@ -73,6 +73,19 @@ export function updateNodeProps(
 	return next;
 }
 
+/** Updates `locked`/`visible` on a node by id. Returns a new document (immutable). */
+export function setNodeFlags(
+	doc: KivDocument,
+	id: string,
+	patch: Partial<Pick<KivNode, "locked" | "visible">>,
+): KivDocument {
+	const next = cloneDocument(doc);
+	const loc = findNode(next, id);
+	if (!loc) return next;
+	Object.assign(loc.node, patch);
+	return next;
+}
+
 /** Adds a node to a slot of a parent. Returns a new document. */
 export function addNode(
 	doc: KivDocument,
