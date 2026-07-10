@@ -33,6 +33,13 @@
 
 	--font-editor: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 	--font-mono: ui-monospace, "SF Mono", "Fira Code", monospace;
+
+	/* A heavy dark shadow reads fine against the dark canvas background, but
+	   the same values look harsh/muddy against the light theme's pale gray —
+	   each theme gets its own tuned shadow rather than sharing one value. */
+	--shadow-canvas-frame:
+		0 0 0 1px rgba(255, 255, 255, 0.04),
+		0 8px 40px rgba(0, 0, 0, 0.5);
 }
 
 /* ── Light theme overrides ── */
@@ -56,6 +63,10 @@
 
 	--color-track: #cbd5e1;
 	--color-track-border: #94a3b8;
+
+	--shadow-canvas-frame:
+		0 1px 2px rgba(15, 23, 42, 0.06),
+		0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
 /* ── Global editor resets ── */

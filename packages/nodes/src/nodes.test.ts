@@ -201,4 +201,45 @@ describe("toHtml", () => {
 		const html = containerNode.toHtml?.({}, { default: "<p>Hi</p>" }, ctx);
 		expect(html).toContain("<p>Hi</p>");
 	});
+
+	it("button applies the hover effect class when set", () => {
+		const html = buttonNode.toHtml?.(
+			{ label: "Go", hoverEffect: "lift" },
+			{},
+			ctx,
+		);
+		expect(html).toContain('class="kiv-hover-lift"');
+	});
+
+	it("button omits the class attribute when hoverEffect is none", () => {
+		const html = buttonNode.toHtml?.({ label: "Go" }, {}, ctx);
+		expect(html).not.toContain("kiv-hover-");
+	});
+
+	it("button's glow color sets the --kiv-glow-rgb custom property", () => {
+		const html = buttonNode.toHtml?.(
+			{ label: "Go", hoverEffect: "glow", hoverGlowColor: "#ff0000" },
+			{},
+			ctx,
+		);
+		expect(html).toContain("--kiv-glow-rgb: 255, 0, 0");
+	});
+
+	it("button omits --kiv-glow-rgb when no glow color is set", () => {
+		const html = buttonNode.toHtml?.(
+			{ label: "Go", hoverEffect: "glow" },
+			{},
+			ctx,
+		);
+		expect(html).not.toContain("--kiv-glow-rgb");
+	});
+
+	it("image applies the hover effect class when set", () => {
+		const html = imageNode.toHtml?.(
+			{ src: "/a.png", hoverEffect: "grayscale" },
+			{},
+			ctx,
+		);
+		expect(html).toContain('class="kiv-hover-grayscale"');
+	});
 });

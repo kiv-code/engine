@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { KivNode } from "@kiv/engine";
 import { computed, inject, ref } from "vue";
-import { EDITOR_STORE_KEY } from "../store/context";
-import { getNodeLabel } from "../utils/node-labels";
+import { EDITOR_STORE_KEY, KIV_TREE_FILTER_KEY } from "../store/context";
+import { getNodeCategoryTint, getNodeLabel } from "../utils/node-labels";
 import NodeIcon from "./NodeIcon.vue";
 
 const props = defineProps<{ node: KivNode; depth?: number }>();
 const store = inject(EDITOR_STORE_KEY);
+const filterQuery = inject(KIV_TREE_FILTER_KEY, ref(""));
 
 const allChildren = (node: KivNode): KivNode[] =>
 	Object.values(node.slots ?? {}).flat();
@@ -15,6 +16,31 @@ const allChildren = (node: KivNode): KivNode[] =>
 const children = computed(() => allChildren(props.node));
 const collapsed = ref(false);
 const isLocked = computed(() => props.node.locked === true);
+
+// ── Filter ───────────────────────────────────────────────────────────────────
+const trimmedQuery = computed(() => filterQuery.value.trim().toLowerCase());
+const filterActive = computed(() => trimmedQuery.value.length > 0);
+
+function matchesQuery(node: KivNode, q: string): boolean {
+	if (
+		node.id.toLowerCase().includes(q) ||
+		getNodeLabel(node.type).toLowerCase().includes(q)
+	) {
+		return true;
+	}
+	return allChildren(node).some((c) => matchesQuery(c, q));
+}
+
+// Hides this row entirely when filtering and neither it nor any descendant matches.
+const visible = computed(
+	() => !filterActive.value || matchesQuery(props.node, trimmedQuery.value),
+);
+// While filtering, force every visible branch open so matches aren't hidden
+// behind a manually-collapsed ancestor — the user's own collapse state is
+// preserved underneath and restored once the filter is cleared.
+const effectiveCollapsed = computed(() =>
+	filterActive.value ? false : collapsed.value,
+);
 
 // ── DnD ──────────────────────────────────────────────────────────────────────
 const dropZone = ref<"before" | "inside" | "after" | null>(null);
@@ -126,10 +152,27 @@ function moveNode(direction: "up" | "down") {
 
 const isSelected = () => store?.selected.value?.id === props.node.id;
 const hasChildren = computed(() => children.value.length > 0);
+
+function duplicate() {
+	if (!store || isLocked.value) return;
+	store.duplicateNode(props.node.id);
+}
+
+// Indent guide lines — one per ancestor level, aligned to that level's icon column.
+const guideStep = 14;
+const guideBase = 8;
+const guideOffsets = computed(() =>
+	Array.from(
+		{ length: props.depth ?? 0 },
+		(_, i) => guideBase + i * guideStep + 7,
+	),
+);
+
+const categoryTint = computed(() => getNodeCategoryTint(props.node.type));
 </script>
 
 <template>
-	<div class="ktn">
+	<div v-if="visible" class="ktn">
 		<div class="ktn__drop-line" :class="{ active: dropZone === 'before' }" />
 
 		<div
@@ -147,12 +190,19 @@ const hasChildren = computed(() => children.value.length > 0);
 			@dragleave="onDragLeave"
 			@drop="onDrop"
 		>
+			<span
+				v-for="offset in guideOffsets"
+				:key="offset"
+				class="ktn__guide"
+				:style="{ left: `${offset}px` }"
+			/>
+
 			<!-- Collapse toggle -->
 			<button
 				v-if="hasChildren"
 				type="button"
 				class="ktn__collapse"
-				:class="{ 'ktn__collapse--open': !collapsed }"
+				:class="{ 'ktn__collapse--open': !effectiveCollapsed }"
 				@click.stop="collapsed = !collapsed"
 			>
 				<svg width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -173,15 +223,18 @@ const hasChildren = computed(() => children.value.length > 0);
 				</svg>
 			</span>
 
-			<span class="ktn__icon"><NodeIcon :type="node.type" :size="13" /></span>
+			<span class="ktn__icon" :style="{ background: categoryTint }">
+				<NodeIcon :type="node.type" :size="13" />
+			</span>
 			<span class="ktn__type">{{ getNodeLabel(node.type) }}</span>
+			<span class="ktn__id">#{{ node.id }}</span>
 			<span v-if="isLocked" class="ktn__lock" title="Locked">
 				<svg width="9" height="9" viewBox="0 0 9 9" fill="none">
 					<rect x="1.5" y="4" width="6" height="4" rx="1" stroke="currentColor" stroke-width="1.1"/>
 					<path d="M2.5 4V2.8a2 2 0 0 1 4 0V4" stroke="currentColor" stroke-width="1.1"/>
 				</svg>
 			</span>
-			<span v-if="hasChildren && collapsed" class="ktn__count">{{ children.length }}</span>
+			<span v-if="hasChildren && effectiveCollapsed" class="ktn__count">{{ children.length }}</span>
 
 			<!-- Context actions (visible on hover / selected) -->
 			<div class="ktn__actions" @click.stop>
@@ -209,6 +262,18 @@ const hasChildren = computed(() => children.value.length > 0);
 				</button>
 				<button
 					type="button"
+					class="ktn__action"
+					title="Duplicate"
+					:disabled="isLocked"
+					@click="duplicate"
+				>
+					<svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+						<rect x="3" y="3" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.1"/>
+						<path d="M1 6V1.8a.8.8 0 0 1 .8-.8H6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+					</svg>
+				</button>
+				<button
+					type="button"
 					class="ktn__action ktn__action--danger"
 					title="Delete"
 					:disabled="isLocked"
@@ -223,7 +288,7 @@ const hasChildren = computed(() => children.value.length > 0);
 
 		<div class="ktn__drop-line" :class="{ active: dropZone === 'after' }" />
 
-		<template v-if="!collapsed">
+		<template v-if="!effectiveCollapsed">
 			<KivTreeNode
 				v-for="child in children"
 				:key="child.id"
@@ -238,6 +303,7 @@ const hasChildren = computed(() => children.value.length > 0);
 .ktn { }
 
 .ktn__row {
+	position: relative;
 	display: flex;
 	align-items: center;
 	gap: 4px;
@@ -263,13 +329,23 @@ const hasChildren = computed(() => children.value.length > 0);
 	color: var(--color-text-primary);
 }
 .ktn__row--selected {
-	background: rgba(99, 102, 241, 0.12);
-	color: #a5b4fc;
+	background: var(--color-accent-muted);
+	color: var(--color-accent-light);
 }
 .ktn__row--drop-inside {
 	background: rgba(99, 102, 241, 0.18) !important;
 	outline: 1px solid rgba(99, 102, 241, 0.5);
 	outline-offset: -1px;
+}
+
+/* Indent guides — one per ancestor level, aligned to that level's icon column */
+.ktn__guide {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 1px;
+	background: var(--color-border);
+	pointer-events: none;
 }
 
 /* Collapse toggle */
@@ -310,15 +386,37 @@ const hasChildren = computed(() => children.value.length > 0);
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 15px;
+	width: 16px;
+	height: 16px;
 	flex-shrink: 0;
-	opacity: 0.7;
+	border-radius: 4px;
+	opacity: 0.85;
 }
 .ktn__type {
+	flex-shrink: 0;
+	font-weight: 500;
+}
+.ktn__id {
 	flex: 1;
+	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	font-weight: 500;
+	font-size: 0.68rem;
+	color: var(--color-text-muted);
+	transition: flex-basis 0.1s, opacity 0.1s;
+}
+.ktn__row--selected .ktn__id {
+	color: var(--color-accent-light);
+	opacity: 0.75;
+}
+/* The id and the hover actions want the same space — while hovering or
+   selected you're about to act on the row, not read its id, so the id
+   yields the room instead of squeezing the actions off the edge. */
+.ktn__row:hover .ktn__id,
+.ktn__row--selected .ktn__id {
+	flex: 0 0 0;
+	width: 0;
+	opacity: 0;
 }
 .ktn__count {
 	font-size: 0.6rem;
@@ -376,7 +474,7 @@ const hasChildren = computed(() => children.value.length > 0);
 }
 .ktn__action--danger:hover {
 	background: rgba(239, 68, 68, 0.15);
-	color: #f87171;
+	color: var(--color-danger);
 }
 
 /* Drop indicators */

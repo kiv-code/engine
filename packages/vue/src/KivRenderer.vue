@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Breakpoint, EventBus, KivDocument } from "@kiv/engine";
+import { HOVER_EFFECTS_CSS } from "@kiv/nodes";
 import { computed, provide } from "vue";
 import { KIV_BUS_KEY } from "./bus";
 import { KIV_CONTEXT_KEY } from "./context";
@@ -30,6 +31,17 @@ const ctx = computed(() => ({
 provide(KIV_CONTEXT_KEY, ctx);
 provide(KIV_EDITOR_MODE_KEY, props.editorMode ?? false);
 provide(KIV_BUS_KEY, props.bus ?? null);
+
+// Hover presets (.kiv-hover-*) need real CSS — `:hover` can't be inlined.
+// Inject it once per document so every KivRenderer instance works out of the
+// box without consumers having to wire it in themselves.
+const HOVER_CSS_ID = "kiv-hover-effects-css";
+if (typeof document !== "undefined" && !document.getElementById(HOVER_CSS_ID)) {
+	const styleEl = document.createElement("style");
+	styleEl.id = HOVER_CSS_ID;
+	styleEl.textContent = HOVER_EFFECTS_CSS;
+	document.head.appendChild(styleEl);
+}
 </script>
 
 <template>

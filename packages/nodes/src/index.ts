@@ -9,6 +9,7 @@ export {
 	textNode,
 	videoNode,
 } from "./content";
+export * from "./hover-effects";
 export * from "./html-utils";
 export * from "./icons";
 export {
@@ -21,6 +22,7 @@ export {
 } from "./layout";
 export { imageNode } from "./media";
 export * from "./scales";
+export * from "./size-field";
 
 import { buttonNode } from "./content/button";
 import { dividerNode } from "./content/divider";

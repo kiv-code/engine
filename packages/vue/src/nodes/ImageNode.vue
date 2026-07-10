@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { RADIUS, SHADOW } from "@kiv/nodes";
+import { hoverEffectClass, hoverGlowStyle, RADIUS, SHADOW } from "@kiv/nodes";
 import { computed } from "vue";
 
 const props = defineProps<{
@@ -10,6 +10,8 @@ const props = defineProps<{
 	width?: string;
 	borderRadius?: string;
 	shadow?: string;
+	hoverEffect?: string;
+	hoverGlowColor?: string;
 }>();
 
 const imageStyle = computed(() => ({
@@ -20,9 +22,17 @@ const imageStyle = computed(() => ({
 	display: "block",
 	borderRadius: RADIUS[props.borderRadius ?? "none"] ?? "0",
 	boxShadow: SHADOW[props.shadow ?? "none"] ?? "none",
+	...hoverGlowStyle(props.hoverGlowColor),
 }));
+const hoverClass = computed(() => hoverEffectClass(props.hoverEffect));
 </script>
 
 <template>
-	<img :src="src" :alt="alt ?? ''" :style="imageStyle" data-kiv-type="image" />
+	<img
+		:src="src"
+		:alt="alt ?? ''"
+		:class="hoverClass"
+		:style="imageStyle"
+		data-kiv-type="image"
+	/>
 </template>

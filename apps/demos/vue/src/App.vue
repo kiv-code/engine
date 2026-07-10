@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Breakpoint, KivDocument, KivPlugin } from "@kiv/engine";
 import { createEngine, renderToHtml } from "@kiv/engine";
-import { ALL_NODES } from "@kiv/nodes";
+import { ALL_NODES, HOVER_EFFECTS_CSS } from "@kiv/nodes";
 import {
 	type AnalyticsEvent,
 	analyticsPlugin,
@@ -183,11 +183,13 @@ function exportHtml() {
 		breakpoint: exportBreakpoint.value,
 	});
 	// Nodes render only their OWN inline styles — the theme variables (colors,
-	// spacing tokens) and the base reset/font-family live in the app's global
-	// stylesheet in the live demo. Neither travels with a bare renderToHtml()
-	// call, so both must be inlined here or the export looks unstyled.
+	// spacing tokens), the base reset/font-family, and the .kiv-hover-* preset
+	// classes (`:hover` can't be inlined) all live in the app's global
+	// stylesheet in the live demo. None of them travel with a bare
+	// renderToHtml() call, so all three must be inlined here or the export
+	// looks unstyled and hover presets silently do nothing.
 	const resetCss = `*,*::before,*::after{box-sizing:border-box;}html,body{margin:0;padding:0;}body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;}img{max-width:100%;}`;
-	const html = `<!doctype html>\n<html lang="${doc.value.i18n.default}">\n<head><meta charset="utf-8"><title>Kiv export</title><style>${resetCss}\n${engine.css()}</style></head>\n<body>${body}</body>\n</html>`;
+	const html = `<!doctype html>\n<html lang="${doc.value.i18n.default}">\n<head><meta charset="utf-8"><title>Kiv export</title><style>${resetCss}\n${engine.css()}\n${HOVER_EFFECTS_CSS}</style></head>\n<body>${body}</body>\n</html>`;
 	const blob = new Blob([html], { type: "text/html" });
 	window.open(URL.createObjectURL(blob), "_blank");
 }

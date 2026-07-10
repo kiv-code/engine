@@ -37,4 +37,14 @@ describe("ImageNode", () => {
 		expect(style).toContain("border-radius: 16px");
 		expect(style).toContain("box-shadow: 0 4px 16px");
 	});
+
+	it("applies the hover effect class when set, omits it otherwise", () => {
+		const withEffect = mount(ImageNode, {
+			props: { hoverEffect: "grayscale" },
+		});
+		expect(withEffect.classes()).toContain("kiv-hover-grayscale");
+
+		const withoutEffect = mount(ImageNode, {});
+		expect(withoutEffect.classes()).toHaveLength(0);
+	});
 });

@@ -1,16 +1,48 @@
 <script setup lang="ts">
-import { inject } from "vue";
-import { EDITOR_STORE_KEY } from "../store/context";
+import type { KivNode } from "@kiv/engine";
+import { computed, inject, provide, ref } from "vue";
+import { useResizablePanel } from "../composables/useResizablePanel";
+import { EDITOR_STORE_KEY, KIV_TREE_FILTER_KEY } from "../store/context";
 import KivTreeNode from "./KivTreeNode.vue";
 
 const store = inject(EDITOR_STORE_KEY);
 const emit = defineEmits<{ openPalette: [] }>();
+
+const filterQuery = ref("");
+provide(KIV_TREE_FILTER_KEY, filterQuery);
+
+function countNodes(node: KivNode): number {
+	const children = Object.values(node.slots ?? {}).flat();
+	return 1 + children.reduce((sum, c) => sum + countNodes(c), 0);
+}
+const nodeCount = computed(() =>
+	store ? countNodes(store.document.value.root) : 0,
+);
+
+const { width, startResize } = useResizablePanel({
+	storageKey: "kiv-editor:tree-width",
+	defaultWidth: 220,
+	min: 180,
+	max: 420,
+	edge: "right",
+});
 </script>
 
 <template>
-	<aside class="kiv-tree">
+	<aside class="kiv-tree" :style="{ width: `${width}px`, minWidth: `${width}px` }">
 		<div class="kiv-tree__header">
-			<span>Structure</span>
+			<div class="kiv-tree__header-row">
+				<span>Structure</span>
+				<span class="kiv-tree__count">{{ nodeCount }}</span>
+			</div>
+			<input
+				v-model="filterQuery"
+				type="text"
+				class="kiv-tree__filter"
+				placeholder="Filter nodes..."
+				spellcheck="false"
+				autocomplete="off"
+			/>
 		</div>
 		<div v-if="store" class="kiv-tree__body">
 			<KivTreeNode :node="store.document.value.root" :depth="0" />
@@ -27,13 +59,13 @@ const emit = defineEmits<{ openPalette: [] }>();
 				Add node
 			</button>
 		</div>
+		<div class="kiv-tree__resize-handle" @mousedown="startResize" />
 	</aside>
 </template>
 
 <style scoped>
 .kiv-tree {
-	width: 220px;
-	min-width: 220px;
+	position: relative;
 	flex-shrink: 0;
 	border-right: 1px solid var(--color-border);
 	display: flex;
@@ -42,17 +74,45 @@ const emit = defineEmits<{ openPalette: [] }>();
 	background: var(--color-surface-raised);
 }
 .kiv-tree__header {
-	padding: 8px 12px;
+	padding: 8px 10px;
+	border-bottom: 1px solid var(--color-border);
+}
+.kiv-tree__header-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 6px;
 	font-size: 0.65rem;
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.1em;
 	color: var(--color-text-secondary);
-	border-bottom: 1px solid var(--color-border);
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
 }
+.kiv-tree__count {
+	font-size: 0.6rem;
+	font-weight: 600;
+	text-transform: none;
+	letter-spacing: normal;
+	background: var(--color-surface-overlay);
+	color: var(--color-text-muted);
+	border-radius: 8px;
+	padding: 1px 6px;
+}
+.kiv-tree__filter {
+	width: 100%;
+	box-sizing: border-box;
+	background: var(--color-surface-base);
+	border: 1px solid var(--color-border);
+	border-radius: 5px;
+	color: var(--color-text-primary);
+	font-size: 0.72rem;
+	font-family: inherit;
+	padding: 4px 7px;
+	outline: none;
+	transition: border-color 0.12s;
+}
+.kiv-tree__filter:focus { border-color: var(--color-accent); }
+.kiv-tree__filter::placeholder { color: var(--color-text-muted); }
 .kiv-tree__body {
 	flex: 1;
 	overflow-y: auto;
@@ -82,9 +142,33 @@ const emit = defineEmits<{ openPalette: [] }>();
 }
 .kiv-tree__add-btn:hover,
 .kiv-tree__add-btn.active {
-	border-color: #6366f1;
-	color: #a5b4fc;
-	background: rgba(99, 102, 241, 0.08);
+	border-color: var(--color-accent);
+	color: var(--color-accent-light);
+	background: var(--color-accent-muted);
+}
+
+.kiv-tree__resize-handle {
+	position: absolute;
+	top: 0;
+	right: -3px;
+	bottom: 0;
+	width: 6px;
+	cursor: col-resize;
+	z-index: 5;
+}
+.kiv-tree__resize-handle::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 2px;
+	width: 2px;
+	border-radius: 1px;
+	background: transparent;
+	transition: background 0.12s;
+}
+.kiv-tree__resize-handle:hover::after {
+	background: var(--color-accent);
 }
 
 </style>

@@ -12,6 +12,7 @@ import { computed, onMounted, onUnmounted, provide, ref, watch } from "vue";
 import { EditorExtensions } from "../extensions";
 import ColorGradientControl from "../inspector/controls/ColorGradientControl.vue";
 import IconPicker from "../inspector/controls/IconPicker.vue";
+import SizeSliderControl from "../inspector/controls/SizeSliderControl.vue";
 import { EDITOR_EXTENSIONS_KEY, EDITOR_STORE_KEY } from "../store/context";
 import { useEditorStore } from "../store/editor-store";
 import { getNodeLabel } from "../utils/node-labels";
@@ -42,6 +43,7 @@ provide(EDITOR_STORE_KEY, store);
 const extensions = new EditorExtensions();
 extensions.addFieldControl("icon-picker", IconPicker);
 extensions.addFieldControl("color-gradient", ColorGradientControl);
+extensions.addFieldControl("size-slider", SizeSliderControl);
 provide(EDITOR_EXTENSIONS_KEY, extensions);
 
 watch(

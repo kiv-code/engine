@@ -5,6 +5,8 @@ import {
 	BUTTON_VARIANT,
 	type ButtonSizeStyle,
 	type ButtonVariantStyle,
+	hoverEffectClass,
+	hoverGlowStyle,
 	resolveBackgroundPaint,
 	resolveIcon,
 	resolveSolidColor,
@@ -33,6 +35,8 @@ const props = defineProps<{
 	background?: unknown;
 	textColor?: unknown;
 	customBorderColor?: string;
+	hoverEffect?: string;
+	hoverGlowColor?: string;
 }>();
 
 const isEditorMode = inject(KIV_EDITOR_MODE_KEY, false);
@@ -132,6 +136,7 @@ const borderFinal = computed(() =>
 		? `2px solid ${props.customBorderColor}`
 		: variantStyle.value.border,
 );
+const hoverClass = computed(() => hoverEffectClass(props.hoverEffect));
 
 const buttonStyle = computed(() => ({
 	// Flex when there's an icon so icon + label align with a gap.
@@ -154,7 +159,11 @@ const buttonStyle = computed(() => ({
 	borderRadius: BUTTON_RADIUS[props.borderRadius ?? "md"] ?? "6px",
 	textDecoration: variantStyle.value.textDecoration ?? "none",
 	cursor: isEditorMode ? "default" : "pointer",
-	transition: "opacity 0.15s, background 0.15s",
+	// Broad on purpose: inline styles always win over the .kiv-hover-* class's
+	// own `transition`, so this has to cover every property a hover preset
+	// might animate, or the preset's :hover state would snap instead of ease.
+	transition:
+		"opacity 0.15s, background 0.15s, transform 0.18s ease, box-shadow 0.18s ease, filter 0.25s ease",
 	lineHeight: "1",
 	whiteSpace: "nowrap" as const,
 	background: bgFinal.value,
@@ -166,6 +175,7 @@ const buttonStyle = computed(() => ({
 	backgroundOrigin: "border-box" as const,
 	color: colorFinal.value,
 	border: borderFinal.value,
+	...hoverGlowStyle(props.hoverGlowColor),
 }));
 
 function onClick(e: MouseEvent) {
@@ -200,6 +210,7 @@ function onClick(e: MouseEvent) {
 	<component
 		:is="tag"
 		v-bind="linkAttrs"
+		:class="hoverClass"
 		:style="buttonStyle"
 		data-kiv-type="button"
 		@click="onClick"

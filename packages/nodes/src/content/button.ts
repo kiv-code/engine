@@ -5,6 +5,7 @@ import {
 	resolveSolidColor,
 	resolveTextPaintStyle,
 } from "../color-gradient";
+import { hoverEffectClass, hoverGlowStyle } from "../hover-effects";
 import { escapeHtml, normalizeSvgIconSize, styleToString } from "../html-utils";
 import { resolveIcon } from "../icons";
 import {
@@ -14,6 +15,15 @@ import {
 	type ButtonSizeStyle,
 	type ButtonVariantStyle,
 } from "../scales";
+
+const BUTTON_HOVER_OPTIONS = [
+	"none",
+	"lift",
+	"grow",
+	"glow",
+	"fade",
+	"underline",
+] as const;
 
 const DEFAULT_SIZE: ButtonSizeStyle = { padding: "9px 20px", fontSize: "14px" };
 const DEFAULT_VARIANT: ButtonVariantStyle = {
@@ -67,7 +77,11 @@ export const buttonNode = defineNode({
 			backgroundOrigin: "border-box",
 			color,
 			border,
+			...hoverGlowStyle(props.hoverGlowColor),
 		});
+
+		const hoverClass = hoverEffectClass(props.hoverEffect);
+		const classAttr = hoverClass ? ` class="${hoverClass}"` : "";
 
 		const href = escapeHtml(props.href ?? "#");
 		const target =
@@ -96,7 +110,7 @@ export const buttonNode = defineNode({
 				? `${label}${iconHtml}`
 				: `${iconHtml}${label}`;
 
-		return `<a href="${href}" target="${escapeHtml(target)}"${rel} style="${style}" data-kiv-type="button">${inner}</a>`;
+		return `<a href="${href}" target="${escapeHtml(target)}"${rel}${classAttr} style="${style}" data-kiv-type="button">${inner}</a>`;
 	},
 	fields: {
 		label: f.text({
@@ -169,6 +183,18 @@ export const buttonNode = defineNode({
 			label: "Font weight",
 			default: "600",
 			group: "Style",
+		}),
+		hoverEffect: f.select([...BUTTON_HOVER_OPTIONS], {
+			label: "Hover effect",
+			default: "none",
+			group: "Effects",
+		}),
+		hoverGlowColor: f.color({
+			label: "Glow color",
+			default: "",
+			hint: "Empty uses the default indigo glow.",
+			showIf: { field: "hoverEffect", equals: "glow" },
+			group: "Effects",
 		}),
 	},
 });

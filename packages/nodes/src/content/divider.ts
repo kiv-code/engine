@@ -1,6 +1,7 @@
 import { defineNode, f } from "@kiv/engine";
 import { escapeHtml, styleToString } from "../html-utils";
 import { SPACING } from "../scales";
+import { sizeField } from "../size-field";
 
 export const dividerNode = defineNode({
 	type: "divider",
@@ -41,22 +42,25 @@ export const dividerNode = defineNode({
 		thickness: f.number({
 			label: "Thickness (px)",
 			default: 1,
-			group: "Style",
-		}),
-		width: f.select(["25%", "50%", "75%", "100%", "full"], {
-			label: "Width",
-			default: "100%",
 			responsive: true,
 			group: "Style",
+		}),
+		width: sizeField({
+			label: "Width",
+			default: "100%",
+			group: "Style",
+			hint: "Any percentage or pixel value — drag the slider or type an exact size.",
 		}),
 		alignment: f.select(["left", "center", "right"], {
 			label: "Alignment",
 			default: "center",
+			responsive: true,
 			group: "Style",
 		}),
 		spacing: f.select(["none", "xs", "sm", "md", "lg", "xl", "2xl"], {
 			label: "Spacing",
 			default: "md",
+			responsive: true,
 			group: "Style",
 		}),
 	},

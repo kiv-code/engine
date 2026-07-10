@@ -277,9 +277,7 @@ watch(
 }
 .kiv-canvas__frame {
 	background: #fff;
-	box-shadow:
-		0 0 0 1px rgba(255, 255, 255, 0.04),
-		0 8px 40px rgba(0, 0, 0, 0.5);
+	box-shadow: var(--shadow-canvas-frame);
 	border-radius: 8px;
 	overflow: hidden;
 	min-height: 480px;

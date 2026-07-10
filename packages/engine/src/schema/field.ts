@@ -50,4 +50,15 @@ export interface FieldDescriptor<T = unknown> {
 	 * and renders it instead of the default control type.
 	 */
 	pluginControl?: string;
+	/**
+	 * Per-unit slider ranges for a free-form size field (e.g. `pluginControl: "size-slider"`).
+	 * The value itself is still a plain CSS length string ("42px", "60%") — this
+	 * only configures the slider/unit-tab UI, it does not constrain the schema.
+	 */
+	sliderUnits?: ReadonlyArray<{
+		unit: string;
+		min: number;
+		max: number;
+		step?: number;
+	}>;
 }

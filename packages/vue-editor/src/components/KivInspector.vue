@@ -6,6 +6,7 @@ import type {
 	Registry,
 } from "@kiv/engine";
 import { computed, inject, ref, watch } from "vue";
+import { useResizablePanel } from "../composables/useResizablePanel";
 import FieldControl from "../inspector/FieldControl.vue";
 import { EDITOR_EXTENSIONS_KEY, EDITOR_STORE_KEY } from "../store/context";
 import { getNodeLabel } from "../utils/node-labels";
@@ -13,6 +14,14 @@ import { getNodeLabel } from "../utils/node-labels";
 const props = defineProps<{ registry: Registry }>();
 const store = inject(EDITOR_STORE_KEY);
 const extensions = inject(EDITOR_EXTENSIONS_KEY, null);
+
+const { width, startResize } = useResizablePanel({
+	storageKey: "kiv-editor:inspector-width",
+	defaultWidth: 260,
+	min: 240,
+	max: 480,
+	edge: "left",
+});
 
 const pluginTabNames = ref<string[]>([]);
 const activePluginTab = ref<string | null>(null);
@@ -107,6 +116,30 @@ const GROUP_ORDER = [
 	"Style",
 	"General",
 ];
+
+// A fixed color per group, consistent across every node type — lets a
+// collapsed group stay recognizable by color alone once a document has
+// several field groups stacked in a narrow panel.
+const GROUP_COLORS: Record<string, string> = {
+	Layout: "#94a3b8",
+	Spacing: "#34d399",
+	"Spacing (advanced)": "#34d399",
+	Typography: "#38bdf8",
+	Content: "#818cf8",
+	Background: "#fb923c",
+	Overlay: "#fb923c",
+	Effects: "#fbbf24",
+	Border: "#a78bfa",
+	Colors: "#f472b6",
+	Link: "#60a5fa",
+	Style: "#2dd4bf",
+	General: "#64748b",
+};
+const DEFAULT_GROUP_COLOR = "#64748b";
+
+function groupColor(name: string): string {
+	return GROUP_COLORS[name] ?? DEFAULT_GROUP_COLOR;
+}
 
 interface GroupedField {
 	key: string;
@@ -264,7 +297,8 @@ function toggleVisible() {
 </script>
 
 <template>
-	<aside class="kiv-inspector">
+	<aside class="kiv-inspector" :style="{ width: `${width}px`, minWidth: `${width}px` }">
+		<div class="kiv-inspector__resize-handle" @mousedown="startResize" />
 		<div class="kiv-inspector__header">Inspector</div>
 
 		<div v-if="!store?.selected.value" class="kiv-inspector__empty">
@@ -412,6 +446,7 @@ function toggleVisible() {
 							<svg class="kiv-inspector__chevron" width="10" height="10" viewBox="0 0 10 10" fill="none">
 								<path d="M3 2l4 3-4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
 							</svg>
+							<span class="kiv-inspector__group-dot" :style="{ background: groupColor(group.name) }" />
 							{{ group.name }}
 						</summary>
 						<div class="kiv-inspector__group-fields">
@@ -435,8 +470,7 @@ function toggleVisible() {
 
 <style scoped>
 .kiv-inspector {
-	width: 260px;
-	min-width: 260px;
+	position: relative;
 	flex-shrink: 0;
 	border-left: 1px solid var(--color-border);
 	display: flex;
@@ -444,6 +478,29 @@ function toggleVisible() {
 	overflow: hidden;
 	background: var(--color-surface-raised);
 	color: var(--color-text-primary);
+}
+.kiv-inspector__resize-handle {
+	position: absolute;
+	top: 0;
+	left: -3px;
+	bottom: 0;
+	width: 6px;
+	cursor: col-resize;
+	z-index: 5;
+}
+.kiv-inspector__resize-handle::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	right: 2px;
+	width: 2px;
+	border-radius: 1px;
+	background: transparent;
+	transition: background 0.12s;
+}
+.kiv-inspector__resize-handle:hover::after {
+	background: var(--color-accent);
 }
 .kiv-inspector__header {
 	padding: 8px 12px;
@@ -480,8 +537,8 @@ function toggleVisible() {
 .kiv-inspector__node-badge {
 	display: inline-block;
 	padding: 2px 8px;
-	background: rgba(99, 102, 241, 0.2);
-	color: #a5b4fc;
+	background: var(--color-accent-muted);
+	color: var(--color-accent-light);
 	border-radius: 4px;
 	font-size: 0.72rem;
 	font-weight: 700;
@@ -575,7 +632,7 @@ function toggleVisible() {
 }
 .kiv-inspector__action-btn--danger:hover {
 	background: rgba(239, 68, 68, 0.15);
-	color: #f87171;
+	color: var(--color-danger);
 }
 .kiv-inspector__action-btn--active {
 	background: var(--color-accent-muted);
@@ -665,6 +722,12 @@ function toggleVisible() {
 }
 details[open] .kiv-inspector__chevron {
 	transform: rotate(90deg);
+}
+.kiv-inspector__group-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	flex-shrink: 0;
 }
 
 .kiv-inspector__group-fields {

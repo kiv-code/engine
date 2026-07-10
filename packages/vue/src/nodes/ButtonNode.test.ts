@@ -40,4 +40,14 @@ describe("ButtonNode", () => {
 		expect(style).toContain("width: 100%");
 		expect(style).toContain("display: block");
 	});
+
+	it("applies the hover effect class when set, omits it otherwise", () => {
+		const withEffect = mount(ButtonNode, {
+			props: { label: "Go", hoverEffect: "underline" },
+		});
+		expect(withEffect.classes()).toContain("kiv-hover-underline");
+
+		const withoutEffect = mount(ButtonNode, { props: { label: "Go" } });
+		expect(withoutEffect.classes()).toHaveLength(0);
+	});
 });
