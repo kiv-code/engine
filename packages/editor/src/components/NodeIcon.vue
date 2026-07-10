@@ -77,6 +77,35 @@ defineProps<{ type: string; size?: number }>();
 			<path d="m21 16-5-5L5 20" />
 		</template>
 
+		<!-- Rich Text: text with bold/italic markers -->
+		<template v-else-if="type === 'rich-text'">
+			<path d="M4 6h16M4 11h16M4 16h10" />
+			<path d="M13 16l8 6M21 16l-8 6" stroke-width="1.4" opacity="0.5" />
+		</template>
+
+		<!-- Link: chain / anchor -->
+		<template v-else-if="type === 'link'">
+			<path d="M10 14a4 4 0 0 0 5.66 0l4-4a4 4 0 0 0-5.66-5.66l-1.5 1.5" />
+			<path d="M14 10a4 4 0 0 0-5.66 0l-4 4a4 4 0 1 0 5.66 5.66l1.5-1.5" />
+		</template>
+
+		<!-- Video: play triangle -->
+		<template v-else-if="type === 'video'">
+			<rect x="3" y="4" width="18" height="16" rx="2" />
+			<polygon points="10,8 17,12 10,16" fill="currentColor" stroke="none" />
+		</template>
+
+		<!-- Icon: star -->
+		<template v-else-if="type === 'icon'">
+			<polygon points="12,2 15,9 22,9 16.5,14 18.5,22 12,17.5 5.5,22 7.5,14 2,9 9,9" />
+		</template>
+
+		<!-- Divider: horizontal line -->
+		<template v-else-if="type === 'divider'">
+			<line x1="4" y1="12" x2="20" y2="12" />
+			<circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+		</template>
+
 		<!-- Fallback: diamond -->
 		<template v-else>
 			<path d="M12 3l9 9-9 9-9-9 9-9Z" />

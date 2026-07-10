@@ -36,6 +36,39 @@ const storageLogPlugin: KivPlugin = {
 	},
 };
 
+// Plugin 4 — uses onEditorReady to add a toolbar button, proving the
+// PluginContext.editor hooks chain works end-to-end.
+const editorHooksLog = shallowRef<string[]>([]);
+const editorHooksPlugin: KivPlugin = {
+	name: "editor-hooks-demo",
+	install() {
+		// Nothing to do at install time — editor may not be mounted yet.
+	},
+	onEditorReady(ctx) {
+		ctx.editor?.addToolbarButton({
+			id: "demo-hook-btn",
+			label: "Hook!",
+			icon: "🧪",
+			onClick() {
+				const msg = `Toolbar button clicked at ${new Date().toLocaleTimeString()}`;
+				editorHooksLog.value = [msg, ...editorHooksLog.value].slice(0, 10);
+			},
+		});
+		ctx.editor?.addKeyboardShortcut({
+			keys: "F2",
+			description: "Demo shortcut",
+			onTrigger() {
+				const msg = `F2 pressed at ${new Date().toLocaleTimeString()}`;
+				editorHooksLog.value = [msg, ...editorHooksLog.value].slice(0, 10);
+			},
+		});
+		ctx.editor?.onDocumentChange(() => {
+			const msg = `Doc changed at ${new Date().toLocaleTimeString()}`;
+			editorHooksLog.value = [msg, ...editorHooksLog.value].slice(0, 10);
+		});
+	},
+};
+
 const engine = createEngine({
 	nodes: [...ALL_NODES],
 	services: { storage: localStorageService },
@@ -54,6 +87,7 @@ const engine = createEngine({
 			},
 		}),
 		storageLogPlugin,
+		editorHooksPlugin,
 	],
 });
 
@@ -216,6 +250,7 @@ function exportHtml() {
 				:registry="engine.registry"
 				:vue-registry="vueRegistry"
 				:bus="engine.bus"
+				:engine="engine"
 				title="Kiv Demo"
 				@update:document="onDocumentUpdate"
 			/>
@@ -288,6 +323,21 @@ function exportHtml() {
 							No edits saved yet.
 						</li>
 						<li v-for="(line, i) in storageLog" :key="i" class="demo-events__item">
+							<span class="demo-events__payload">{{ line }}</span>
+						</li>
+					</ul>
+				</div>
+				<!-- Plugin 4: editor-hooks (onEditorReady + ctx.editor) -->
+				<div class="demo-panel">
+					<div class="demo-panel__title">
+						<span class="demo-panel__dot demo-panel__dot--hooks" />
+						editor-hooks · onEditorReady adds toolbar button + F2 shortcut
+					</div>
+					<ul class="demo-events__list">
+						<li v-if="!editorHooksLog.length" class="demo-events__empty">
+							No hooks triggered yet. Try the 🧪 button in the editor toolbar.
+						</li>
+						<li v-for="(line, i) in editorHooksLog" :key="i" class="demo-events__item">
 							<span class="demo-events__payload">{{ line }}</span>
 						</li>
 					</ul>
@@ -528,6 +578,9 @@ body {
 }
 .demo-panel__dot--storage {
 	background: #818cf8;
+}
+.demo-panel__dot--hooks {
+	background: #f472b6;
 }
 
 /* Click counts (plugin 2) */

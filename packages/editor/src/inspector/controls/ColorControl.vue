@@ -1,6 +1,14 @@
 <script setup lang="ts">
-defineProps<{ modelValue?: string }>();
-defineEmits<{ "update:modelValue": [value: string] }>();
+import { computed } from "vue";
+
+const props = defineProps<{ modelValue?: string }>();
+const emit = defineEmits<{ "update:modelValue": [value: string] }>();
+
+const safeColor = computed(() => {
+	const v = props.modelValue;
+	if (!v || !/^#[0-9a-fA-F]{6}$/.test(v)) return "#000000";
+	return v;
+});
 </script>
 
 <template>
@@ -9,16 +17,16 @@ defineEmits<{ "update:modelValue": [value: string] }>();
 			<input
 				type="color"
 				class="kiv-color__input"
-				:value="modelValue ?? '#000000'"
-				@input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+				:value="safeColor"
+				@input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
 			/>
-			<span class="kiv-color__preview" :style="{ background: modelValue ?? '#000000' }" />
+			<span class="kiv-color__preview" :style="{ background: safeColor }" />
 		</div>
 		<input
 			type="text"
 			class="kiv-input kiv-color__text"
 			:value="modelValue ?? ''"
-			@input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+			@input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
 		/>
 	</div>
 </template>

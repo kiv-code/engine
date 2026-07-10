@@ -3,12 +3,16 @@ import type {
 	Breakpoint,
 	EventBus,
 	KivDocument,
+	KivEngine,
 	KivNode,
 	Registry,
 } from "@kiv/engine";
 import type { VueRegistry } from "@kiv/vue";
-import { computed, provide, ref, watch } from "vue";
-import { EDITOR_STORE_KEY } from "../store/context";
+import { computed, onMounted, onUnmounted, provide, ref, watch } from "vue";
+import { EditorExtensions } from "../extensions";
+import ColorGradientControl from "../inspector/controls/ColorGradientControl.vue";
+import IconPicker from "../inspector/controls/IconPicker.vue";
+import { EDITOR_EXTENSIONS_KEY, EDITOR_STORE_KEY } from "../store/context";
 import { useEditorStore } from "../store/editor-store";
 import { getNodeLabel } from "../utils/node-labels";
 import KivCanvas from "./KivCanvas.vue";
@@ -24,6 +28,8 @@ const props = defineProps<{
 	theme?: "dark" | "light";
 	/** Shared bus (e.g. `engine.bus`) so plugins can observe editor mutations. */
 	bus?: EventBus;
+	/** Engine reference — when provided, triggered `setEditorExtensions()` on mount so plugins' `onEditorReady` fires. */
+	engine?: KivEngine;
 }>();
 
 const emit = defineEmits<{ "update:document": [doc: KivDocument] }>();
@@ -33,11 +39,66 @@ const store = useEditorStore(props.document, props.registry, {
 });
 provide(EDITOR_STORE_KEY, store);
 
+const extensions = new EditorExtensions();
+extensions.addFieldControl("icon-picker", IconPicker);
+extensions.addFieldControl("color-gradient", ColorGradientControl);
+provide(EDITOR_EXTENSIONS_KEY, extensions);
+
 watch(
 	() => store.document.value,
-	(doc) => emit("update:document", doc),
+	(doc) => {
+		emit("update:document", doc);
+		extensions.notifyDocumentChanged(doc);
+	},
 	{ deep: true },
 );
+
+// Wire extension notifications to editor store events
+onMounted(() => {
+	if (props.engine) {
+		props.engine.setEditorExtensions(extensions);
+	}
+	// Subscribe to bus events to trigger extension callbacks
+	const bus = props.bus;
+	if (bus) {
+		const unsubSelect = bus.on("selection.changed", (state) => {
+			const ids = state.ids;
+			const doc = store.document.value;
+			if (ids.length > 0) {
+				function find(n: KivNode): KivNode | null {
+					if (n.id === ids[0]) return n;
+					for (const ch of Object.values(n.slots ?? {})) {
+						for (const c of ch) {
+							const f = find(c);
+							if (f) return f;
+						}
+					}
+					return null;
+				}
+				const node = find(doc.root);
+				if (node) extensions.notifyNodeSelected(node);
+			}
+		});
+		onUnmounted(unsubSelect);
+
+		const unsubCreate = bus.on("node.created", (payload) => {
+			const doc = store.document.value;
+			function find(n: KivNode): KivNode | null {
+				if (n.id === payload.id) return n;
+				for (const ch of Object.values(n.slots ?? {})) {
+					for (const c of ch) {
+						const f = find(c);
+						if (f) return f;
+					}
+				}
+				return null;
+			}
+			const node = find(doc.root);
+			if (node) extensions.notifyNodeCreated(node);
+		});
+		onUnmounted(unsubCreate);
+	}
+});
 
 const treeOpen = ref(true);
 const inspectorOpen = ref(true);
@@ -163,14 +224,28 @@ const BREAKPOINTS: BpDef[] = [
 				<button
 					type="button"
 					class="kiv-toolbar__action"
-					:disabled="!store.canRedo.value"
 					title="Redo (⌘⇧Z)"
+					:disabled="!store.canRedo.value"
 					@click="store.redo()"
 				>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>
 					</svg>
 				</button>
+
+				<!-- Plugin toolbar buttons -->
+				<template v-for="btn in extensions.getToolbarButtons()" :key="btn.id">
+					<div class="kiv-toolbar__sep" />
+					<button
+						type="button"
+						class="kiv-toolbar__action"
+						:title="btn.label"
+						@click="btn.onClick()"
+					>
+						<template v-if="btn.icon">{{ btn.icon }}</template>
+						<template v-else>{{ btn.label }}</template>
+					</button>
+				</template>
 
 				<!-- Locale switcher (only when doc supports more than one) -->
 				<template v-if="hasMultipleLocales">

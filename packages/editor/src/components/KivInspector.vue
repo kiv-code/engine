@@ -7,11 +7,24 @@ import type {
 } from "@kiv/engine";
 import { computed, inject, ref, watch } from "vue";
 import FieldControl from "../inspector/FieldControl.vue";
-import { EDITOR_STORE_KEY } from "../store/context";
+import { EDITOR_EXTENSIONS_KEY, EDITOR_STORE_KEY } from "../store/context";
 import { getNodeLabel } from "../utils/node-labels";
 
 const props = defineProps<{ registry: Registry }>();
 const store = inject(EDITOR_STORE_KEY);
+const extensions = inject(EDITOR_EXTENSIONS_KEY, null);
+
+const pluginTabNames = ref<string[]>([]);
+const activePluginTab = ref<string | null>(null);
+
+// Keep the list of plugin tab names in sync when extensions are available
+watch(
+	() => extensions?.getInspectorTabs(),
+	(tabs) => {
+		if (tabs) pluginTabNames.value = Array.from(tabs.keys());
+	},
+	{ immediate: true },
+);
 
 // ── Editable node ID ────────────────────────────────────────────────────────
 const idDraft = ref("");
@@ -81,6 +94,8 @@ function isLocalized(v: unknown): v is { $t: Record<string, unknown> } {
 
 const GROUP_ORDER = [
 	"Layout",
+	"Spacing",
+	"Spacing (advanced)",
 	"Typography",
 	"Content",
 	"Background",
@@ -123,7 +138,15 @@ const groupedFields = computed(() => {
 		groups.get(g)?.push({ key, descriptor });
 	}
 
-	return GROUP_ORDER.filter((g) => groups.has(g)).map((g) => ({
+	// Known groups render in GROUP_ORDER's curated order; any group name a
+	// node uses that isn't in that list (a new/custom category) still renders
+	// — appended at the end, in first-seen order — instead of silently
+	// vanishing from the Inspector. Missing entirely looks identical to "no
+	// such field exists," which is much harder to notice than a
+	// slightly-out-of-place section.
+	const known = GROUP_ORDER.filter((g) => groups.has(g));
+	const unknown = [...groups.keys()].filter((g) => !GROUP_ORDER.includes(g));
+	return [...known, ...unknown].map((g) => ({
 		name: g,
 		fields: groups.get(g) ?? [],
 	}));
@@ -316,69 +339,95 @@ function toggleVisible() {
 				</div>
 			</div>
 
-			<!-- Editable node ID -->
-			<div class="kiv-inspector__id-row">
-				<label class="kiv-inspector__id-label">ID</label>
-				<div class="kiv-inspector__id-field" :class="{ 'kiv-inspector__id-field--error': idError }">
-					<span class="kiv-inspector__id-hash">#</span>
-					<input
-						:key="store.selected.value.id"
-						v-model="idDraft"
-						type="text"
-						class="kiv-inspector__id-input"
-						spellcheck="false"
-						autocomplete="off"
-						@keydown.enter="commitId"
-						@keydown.esc="resetIdDraft"
-						@blur="commitId"
-					/>
-				</div>
-			</div>
-			<div v-if="idError" class="kiv-inspector__id-hint kiv-inspector__id-hint--error">
-				{{ idError }}
+			<!-- Plugin inspector tabs -->
+			<div v-if="pluginTabNames.length > 0" class="kiv-inspector__tabs">
+				<button
+					v-for="tabName in pluginTabNames"
+					:key="tabName"
+					type="button"
+					class="kiv-inspector__tab"
+					:class="{ 'kiv-inspector__tab--active': activePluginTab === tabName }"
+					@click="activePluginTab = activePluginTab === tabName ? null : tabName"
+				>{{ tabName }}</button>
 			</div>
 
-			<!-- Responsive breakpoint mini-switcher (only when node has responsive fields) -->
-			<div v-if="hasResponsiveFields" class="kiv-inspector__responsive">
-				<span class="kiv-inspector__responsive-label">Breakpoint</span>
-				<div class="kiv-inspector__responsive-tabs">
-					<button
-						v-for="bp in BP_OPTIONS"
-						:key="bp.value"
-						type="button"
-						class="kiv-inspector__responsive-tab"
-						:class="{ active: fieldBreakpoint === bp.value }"
-						@click="store?.setBreakpoint(bp.value)"
-					>{{ bp.label }}</button>
-				</div>
+			<!-- Plugin tab content -->
+			<div
+				v-if="activePluginTab && extensions"
+				class="kiv-inspector__plugin-tab"
+			>
+				<component
+					:is="extensions.getInspectorTabs().get(activePluginTab)?.component"
+					:node="store?.selected.value"
+					:store="store"
+				/>
 			</div>
 
-			<div class="kiv-inspector__groups">
-				<details
-					v-for="group in groupedFields"
-					:key="group.name"
-					class="kiv-inspector__group"
-					open
-				>
-					<summary class="kiv-inspector__group-title">
-						<svg class="kiv-inspector__chevron" width="10" height="10" viewBox="0 0 10 10" fill="none">
-							<path d="M3 2l4 3-4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-						</svg>
-						{{ group.name }}
-					</summary>
-					<div class="kiv-inspector__group-fields">
-						<FieldControl
-							v-for="field in group.fields"
-							:key="`${field.key}-${fieldBreakpoint}-${fieldLocale}`"
-							:field-key="field.key"
-							:descriptor="field.descriptor"
-							:model-value="getFieldValue(field.key, field.descriptor)"
-							:breakpoint="field.descriptor.responsive ? fieldBreakpoint : undefined"
-							:locale="field.descriptor.localizable && localesCount > 1 ? fieldLocale : undefined"
-							@update:model-value="updateFieldValue(field.key, field.descriptor, $event)"
+			<div v-if="!activePluginTab" class="kiv-inspector__fields">
+				<!-- Editable node ID -->
+				<div class="kiv-inspector__id-row">
+					<label class="kiv-inspector__id-label">ID</label>
+					<div class="kiv-inspector__id-field" :class="{ 'kiv-inspector__id-field--error': idError }">
+						<span class="kiv-inspector__id-hash">#</span>
+						<input
+							:key="store.selected.value.id"
+							v-model="idDraft"
+							type="text"
+							class="kiv-inspector__id-input"
+							spellcheck="false"
+							autocomplete="off"
+							@keydown.enter="commitId"
+							@keydown.esc="resetIdDraft"
+							@blur="commitId"
 						/>
 					</div>
-				</details>
+				</div>
+				<div v-if="idError" class="kiv-inspector__id-hint kiv-inspector__id-hint--error">
+					{{ idError }}
+				</div>
+
+				<!-- Responsive breakpoint mini-switcher (only when node has responsive fields) -->
+				<div v-if="hasResponsiveFields" class="kiv-inspector__responsive">
+					<span class="kiv-inspector__responsive-label">Breakpoint</span>
+					<div class="kiv-inspector__responsive-tabs">
+						<button
+							v-for="bp in BP_OPTIONS"
+							:key="bp.value"
+							type="button"
+							class="kiv-inspector__responsive-tab"
+							:class="{ active: fieldBreakpoint === bp.value }"
+							@click="store?.setBreakpoint(bp.value)"
+						>{{ bp.label }}</button>
+					</div>
+				</div>
+
+				<div class="kiv-inspector__groups">
+					<details
+						v-for="group in groupedFields"
+						:key="group.name"
+						class="kiv-inspector__group"
+						open
+					>
+						<summary class="kiv-inspector__group-title">
+							<svg class="kiv-inspector__chevron" width="10" height="10" viewBox="0 0 10 10" fill="none">
+								<path d="M3 2l4 3-4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+							</svg>
+							{{ group.name }}
+						</summary>
+						<div class="kiv-inspector__group-fields">
+							<FieldControl
+								v-for="field in group.fields"
+								:key="`${field.key}-${fieldBreakpoint}-${fieldLocale}`"
+								:field-key="field.key"
+								:descriptor="field.descriptor"
+								:model-value="getFieldValue(field.key, field.descriptor)"
+								:breakpoint="field.descriptor.responsive ? fieldBreakpoint : undefined"
+								:locale="field.descriptor.localizable && localesCount > 1 ? fieldLocale : undefined"
+								@update:model-value="updateFieldValue(field.key, field.descriptor, $event)"
+							/>
+						</div>
+					</details>
+				</div>
 			</div>
 		</template>
 	</aside>
@@ -573,8 +622,15 @@ function toggleVisible() {
 	color: var(--color-accent-light);
 }
 
+.kiv-inspector__fields {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
 .kiv-inspector__groups {
 	flex: 1;
+	min-height: 0;
 	overflow-y: auto;
 }
 .kiv-inspector__groups::-webkit-scrollbar { width: 3px; }

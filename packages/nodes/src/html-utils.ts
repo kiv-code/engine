@@ -10,8 +10,15 @@ export function styleToString(
 	return declarations.length ? `${declarations.join("; ")};` : "";
 }
 
+const VENDOR_PREFIXES = /^(webkit|moz|ms|o)-/;
+
 function kebabCase(key: string): string {
-	return key.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+	const hyphenated = key.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+	// Vendor-prefixed CSS properties need a LEADING dash (`-webkit-...`), which
+	// the regex above can't produce since there's no preceding char to match
+	// against at the start of the string — add it explicitly or the property
+	// is invalid CSS and gets silently dropped by the browser.
+	return VENDOR_PREFIXES.test(hyphenated) ? `-${hyphenated}` : hyphenated;
 }
 
 /**

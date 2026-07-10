@@ -1,6 +1,19 @@
 import { defineNode, f } from "@kiv/engine";
+import {
+	colorOrGradientField,
+	resolveBackgroundPaint,
+	resolveSolidColor,
+} from "../color-gradient";
 import { escapeHtml, styleToString } from "../html-utils";
 import { BLUR, RADIUS, SECTION_SPACING, SHADOW } from "../scales";
+
+function isGradient(value: unknown): boolean {
+	return (
+		!!value &&
+		typeof value === "object" &&
+		(value as { type?: string }).type === "gradient"
+	);
+}
 
 export const sectionNode = defineNode({
 	type: "section",
@@ -12,15 +25,22 @@ export const sectionNode = defineNode({
 			display: "flex",
 			flexDirection: "column",
 		};
-		if (props.background && props.background !== "transparent") {
-			s.backgroundColor = String(props.background);
-		}
+		const solidBg = resolveSolidColor(props.background, "");
+		if (solidBg) s.backgroundColor = solidBg;
 		if (props.backgroundImage) {
 			s.backgroundImage = `url(${props.backgroundImage})`;
 			s.backgroundSize = String(props.backgroundSize ?? "cover");
 			s.backgroundPosition = String(props.backgroundPosition ?? "center");
 		}
-		if (props.gradient) s.backgroundImage = String(props.gradient);
+		// Gradient wins over an image background, matching the previous
+		// (pre-migration) precedence of the standalone "gradient" field.
+		if (isGradient(props.background)) {
+			s.backgroundImage = resolveBackgroundPaint(props.background, "");
+			// Default background-origin is padding-box: paired with a border
+			// (borderWidth > 0), the gradient sizes to the smaller padding-box
+			// area then tiles to fill the border strip, leaving a visible seam.
+			s.backgroundOrigin = "border-box";
+		}
 		if (props.opacity !== undefined && props.opacity !== 1) {
 			s.opacity = String(props.opacity);
 		}
@@ -85,8 +105,10 @@ export const sectionNode = defineNode({
 				position: "absolute",
 				inset: "0",
 				pointerEvents: "none",
-				background: String(props.overlayColor ?? "rgba(0,0,0,0.4)"),
-				opacity: String(props.overlayOpacity ?? 0.4),
+				background: resolveBackgroundPaint(
+					props.overlayColor,
+					"rgba(0, 0, 0, 0.4)",
+				),
 			});
 			overlayHtml = `<div class="kiv-section__overlay" style="${overlayStyle}"></div>`;
 		}
@@ -112,9 +134,8 @@ export const sectionNode = defineNode({
 	},
 	fields: {
 		// Background
-		background: f.color({
-			label: "Background color",
-			default: "transparent",
+		background: colorOrGradientField({
+			label: "Background",
 			group: "Background",
 		}),
 		backgroundImage: f.text({
@@ -135,22 +156,18 @@ export const sectionNode = defineNode({
 			default: "center",
 			group: "Background",
 		}),
-		gradient: f.text({ label: "Gradient (CSS)", group: "Background" }),
 		// Overlay
 		overlay: f.boolean({
 			label: "Enable overlay",
 			default: false,
 			group: "Overlay",
 		}),
-		overlayColor: f.color({
+		// Opacity is the alpha slider on the solid color (or per-stop on a
+		// gradient overlay) — no separate "overlay opacity" field needed.
+		overlayColor: colorOrGradientField({
 			label: "Overlay color",
-			default: "rgba(0,0,0,0.4)",
 			group: "Overlay",
-		}),
-		overlayOpacity: f.number({
-			label: "Overlay opacity (0–1)",
-			default: 0.4,
-			group: "Overlay",
+			default: { solid: "#000000", alpha: 0.4 },
 		}),
 		// Effects
 		blur: f.select(["none", "sm", "md", "lg"], {

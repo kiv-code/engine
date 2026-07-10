@@ -1,5 +1,12 @@
 import { defineNode, f } from "@kiv/engine";
+import {
+	colorOrGradientField,
+	resolveBackgroundPaint,
+	resolveSolidColor,
+	resolveTextPaintStyle,
+} from "../color-gradient";
 import { escapeHtml, normalizeSvgIconSize, styleToString } from "../html-utils";
+import { resolveIcon } from "../icons";
 import {
 	BUTTON_RADIUS,
 	BUTTON_SIZE,
@@ -24,21 +31,16 @@ export const buttonNode = defineNode({
 		const sizing = BUTTON_SIZE[String(props.size ?? "md")] ?? DEFAULT_SIZE;
 		const icon = typeof props.icon === "string" ? props.icon.trim() : "";
 		const hasIcon = icon.length > 0;
-		const iconIsSvg = hasIcon && icon.startsWith("<");
+		const resolvedIconSvg = hasIcon ? resolveIcon(icon) : null;
+		const iconIsSvg = hasIcon && (icon.startsWith("<") || !!resolvedIconSvg);
+		const iconSize = props.iconSize ?? 16;
+		const iconColor = (props.iconColor as string | undefined) || "";
 
-		let background = (props.customBackground as string) || variant.background;
-		if (props.backgroundType === "gradient") {
-			const angle = props.gradientAngle ?? 135;
-			const from = (props.gradientFrom as string) || "#6366f1";
-			const to = (props.gradientTo as string) || "#a855f7";
-			const middle =
-				typeof props.gradientMiddle === "string"
-					? props.gradientMiddle.trim()
-					: "";
-			const stops = middle ? `${from}, ${middle}, ${to}` : `${from}, ${to}`;
-			background = `linear-gradient(${angle}deg, ${stops})`;
-		}
-		const color = (props.customColor as string) || variant.color;
+		const background = resolveBackgroundPaint(
+			props.background,
+			variant.background,
+		);
+		const color = resolveSolidColor(props.textColor, variant.color);
 		const border = props.customBorderColor
 			? `2px solid ${props.customBorderColor}`
 			: variant.border;
@@ -59,6 +61,10 @@ export const buttonNode = defineNode({
 			lineHeight: "1",
 			whiteSpace: "nowrap",
 			background,
+			// See ButtonNode.vue's identical comment: without this, a gradient
+			// background paired with a transparent border tiles at the edges
+			// instead of extending smoothly under the border.
+			backgroundOrigin: "border-box",
 			color,
 			border,
 		});
@@ -70,14 +76,20 @@ export const buttonNode = defineNode({
 				: String(props.target ?? "_self");
 		const rel = target === "_blank" ? ' rel="noopener noreferrer"' : "";
 
+		const iconStyle =
+			`font-size:${iconSize}px` +
+			(iconColor ? `;color:${escapeHtml(iconColor)}` : "");
 		const iconHtml = hasIcon
 			? iconIsSvg
-				? `<span class="kiv-btn-icon">${normalizeSvgIconSize(icon)}</span>`
-				: `<i class="${escapeHtml(icon)} kiv-btn-icon" aria-hidden="true"></i>`
+				? `<span class="kiv-btn-icon" style="${iconStyle}">${normalizeSvgIconSize(resolvedIconSvg || icon)}</span>`
+				: `<i class="${escapeHtml(icon)} kiv-btn-icon" style="${iconStyle}" aria-hidden="true"></i>`
 			: "";
+		const labelStyle = styleToString(
+			resolveTextPaintStyle(props.textColor, variant.color),
+		);
 		const label =
 			props.label !== undefined
-				? `<span>${escapeHtml(props.label)}</span>`
+				? `<span style="${labelStyle}">${escapeHtml(props.label)}</span>`
 				: "";
 		const inner =
 			props.iconPosition === "right"
@@ -93,14 +105,11 @@ export const buttonNode = defineNode({
 			inline: true,
 			group: "Content",
 		}),
-		// Icon: bring-your-own. Accepts either an icon-font CSS class
-		// (e.g. "fa-solid fa-arrow-right", "lucide-check") OR raw inline SVG
-		// (e.g. "<svg ...>...</svg>"). The engine ships NO icon library — the
-		// consumer loads their own (Font Awesome, Lucide, …) via global CSS.
 		icon: f.text({
-			label: "Icon (class or SVG)",
+			label: "Icon",
 			default: "",
 			group: "Content",
+			pluginControl: "icon-picker",
 		}),
 		iconPosition: f.select(["left", "right"], {
 			label: "Icon position",
@@ -125,50 +134,10 @@ export const buttonNode = defineNode({
 		}),
 		// ── Colors ────────────────────────────────────────────────────────────
 		// Escape hatch: override the variant's theme colors for this one button.
-		// The inspector shows only the fields relevant to the chosen type.
-		backgroundType: f.select(["solid", "gradient"], {
-			label: "Background type",
-			default: "solid",
-			group: "Colors",
-		}),
-		// Solid: only when backgroundType === "solid". Empty → inherit variant/theme.
-		customBackground: f.color({
-			label: "Background",
-			default: "",
-			group: "Colors",
-			showIf: { field: "backgroundType", equals: "solid" },
-		}),
-		// Gradient: only when backgroundType === "gradient".
-		gradientFrom: f.color({
-			label: "From",
-			default: "#6366f1",
-			group: "Colors",
-			showIf: { field: "backgroundType", equals: "gradient" },
-		}),
-		gradientMiddle: f.color({
-			label: "Middle (optional)",
-			default: "",
-			group: "Colors",
-			showIf: { field: "backgroundType", equals: "gradient" },
-		}),
-		gradientTo: f.color({
-			label: "To",
-			default: "#a855f7",
-			group: "Colors",
-			showIf: { field: "backgroundType", equals: "gradient" },
-		}),
-		gradientAngle: f.number({
-			label: "Angle (deg)",
-			default: 135,
-			group: "Colors",
-			showIf: { field: "backgroundType", equals: "gradient" },
-		}),
-		// Text + border apply to both types.
-		customColor: f.color({
-			label: "Text color",
-			default: "",
-			group: "Colors",
-		}),
+		// Empty solid → inherit variant/theme. Shared control across all nodes
+		// that support solid-or-gradient paint (see packages/nodes/src/color-gradient.ts).
+		background: colorOrGradientField({ label: "Background", group: "Colors" }),
+		textColor: colorOrGradientField({ label: "Text color", group: "Colors" }),
 		customBorderColor: f.color({
 			label: "Border color",
 			default: "",

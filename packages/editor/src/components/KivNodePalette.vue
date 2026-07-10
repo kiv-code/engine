@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { KivNode, Registry } from "@kiv/engine";
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, inject, nextTick, ref, watch } from "vue";
+import { EDITOR_EXTENSIONS_KEY } from "../store/context";
 import { getNodeLabel } from "../utils/node-labels";
 import NodeIcon from "./NodeIcon.vue";
 
@@ -9,7 +10,7 @@ interface PaletteItem {
 	label: string;
 	description: string;
 	hasDefaultSlot: boolean;
-	category: "layout" | "content" | "media";
+	category: string;
 }
 
 const PALETTE: PaletteItem[] = [
@@ -56,6 +57,13 @@ const PALETTE: PaletteItem[] = [
 		category: "content",
 	},
 	{
+		type: "rich-text",
+		label: "Rich Text",
+		description: "HTML text block with inline formatting",
+		hasDefaultSlot: false,
+		category: "content",
+	},
+	{
 		type: "text",
 		label: "Text",
 		description: "Paragraph or inline text block",
@@ -70,9 +78,37 @@ const PALETTE: PaletteItem[] = [
 		category: "content",
 	},
 	{
+		type: "link",
+		label: "Link",
+		description: "Inline or button-style hyperlink",
+		hasDefaultSlot: false,
+		category: "content",
+	},
+	{
+		type: "divider",
+		label: "Divider",
+		description: "Horizontal rule with style, color, and spacing options",
+		hasDefaultSlot: false,
+		category: "content",
+	},
+	{
 		type: "image",
 		label: "Image",
 		description: "Responsive image with cover/contain fit",
+		hasDefaultSlot: false,
+		category: "media",
+	},
+	{
+		type: "video",
+		label: "Video",
+		description: "YouTube, Vimeo, or custom video embed",
+		hasDefaultSlot: false,
+		category: "media",
+	},
+	{
+		type: "icon",
+		label: "Icon",
+		description: "CSS class or inline SVG icon",
 		hasDefaultSlot: false,
 		category: "media",
 	},
@@ -82,10 +118,22 @@ const CATEGORY_META: Record<string, { label: string; color: string }> = {
 	layout: { label: "Layout", color: "#818cf8" },
 	content: { label: "Content", color: "#34d399" },
 	media: { label: "Media", color: "#fb923c" },
+	interactive: { label: "Interactive", color: "#f472b6" },
+	embed: { label: "Embed", color: "#a78bfa" },
 };
 
 // Leaf node types — cannot contain children
-const LEAF_TYPES = new Set(["heading", "text", "button", "image"]);
+const LEAF_TYPES = new Set([
+	"heading",
+	"rich-text",
+	"text",
+	"button",
+	"link",
+	"image",
+	"video",
+	"icon",
+	"divider",
+]);
 
 const props = defineProps<{
 	open: boolean;
@@ -94,6 +142,27 @@ const props = defineProps<{
 	registry?: Registry;
 	theme?: "dark" | "light";
 }>();
+
+const extensions = inject(EDITOR_EXTENSIONS_KEY, null);
+
+// Merge hardcoded palette with plugin-registered palette items
+const mergedPalette = computed<PaletteItem[]>(() => {
+	const items = [...PALETTE];
+	if (extensions) {
+		for (const pluginItem of extensions.getPaletteItems()) {
+			if (!items.some((i) => i.type === pluginItem.type)) {
+				items.push({
+					type: pluginItem.type,
+					label: pluginItem.label,
+					description: pluginItem.description ?? "",
+					hasDefaultSlot: true,
+					category: pluginItem.category ?? "content",
+				});
+			}
+		}
+	}
+	return items;
+});
 
 const emit = defineEmits<{
 	close: [];
@@ -129,9 +198,22 @@ const insertHint = computed(() => {
 	return `Will be added inside "${label}"`;
 });
 
+// Derive categories from merged palette (keeps hardcoded order, adds any new ones from plugins)
+const categories = computed<string[]>(() => {
+	const seen = new Set<string>();
+	const order: string[] = [];
+	for (const item of mergedPalette.value) {
+		if (!seen.has(item.category)) {
+			seen.add(item.category);
+			order.push(item.category);
+		}
+	}
+	return order;
+});
+
 const filtered = computed(() => {
 	const q = search.value.toLowerCase().trim();
-	return PALETTE.filter(
+	return mergedPalette.value.filter(
 		(p) =>
 			!q ||
 			p.label.toLowerCase().includes(q) ||
@@ -140,15 +222,13 @@ const filtered = computed(() => {
 	);
 });
 
-const categories = ["layout", "content", "media"] as const;
-
 function categoryItems(cat: string) {
 	return filtered.value.filter((p) => p.category === cat);
 }
 
 // Flat list in display order — used for keyboard navigation
 const flatItems = computed(() =>
-	categories.flatMap((cat) => categoryItems(cat)),
+	categories.value.flatMap((cat) => categoryItems(cat)),
 );
 
 function isActive(item: PaletteItem) {
@@ -258,7 +338,7 @@ function onKeydown(e: KeyboardEvent) {
 							<div v-if="categoryItems(cat).length" class="kiv-palette-modal__group">
 								<div class="kiv-palette-modal__group-label">
 									<span class="kiv-palette-modal__group-dot" :style="{ background: CATEGORY_META[cat]?.color }" />
-									{{ CATEGORY_META[cat]?.label }}
+									{{ CATEGORY_META[cat]?.label ?? cat }}
 								</div>
 								<div class="kiv-palette-modal__grid">
 									<button

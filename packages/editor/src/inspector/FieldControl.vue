@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { Breakpoint, FieldDescriptor } from "@kiv/engine";
+import { inject } from "vue";
+import { EDITOR_EXTENSIONS_KEY } from "../store/context";
 import BooleanControl from "./controls/BooleanControl.vue";
 import ColorControl from "./controls/ColorControl.vue";
 import NumberControl from "./controls/NumberControl.vue";
@@ -14,6 +16,15 @@ const props = defineProps<{
 	breakpoint?: Breakpoint;
 	locale?: string;
 }>();
+
+const extensions = inject(EDITOR_EXTENSIONS_KEY, null);
+
+// Check if a plugin has registered a custom control for this field type
+const pluginControlKey =
+	props.descriptor.pluginControl ?? props.descriptor.control;
+const customControl = pluginControlKey
+	? extensions?.getFieldControl(pluginControlKey)
+	: undefined;
 
 const emit = defineEmits<{ "update:modelValue": [value: unknown] }>();
 
@@ -46,9 +57,18 @@ const localeBadge = props.locale ? props.locale.toUpperCase() : "";
 				<span v-if="bpBadge" class="kiv-field__bp-badge">{{ bpBadge }}</span>
 			</span>
 		</div>
+		<!-- Custom plugin control (if registered for this field type) -->
+		<component
+			:is="customControl"
+			v-if="customControl"
+			:model-value="modelValue"
+			:field-key="fieldKey"
+			:descriptor="descriptor"
+			@update:model-value="emit('update:modelValue', $event)"
+		/>
 		<!-- For boolean we pass the badge separately so BooleanControl can show it inline -->
 		<BooleanControl
-			v-if="descriptor.control === 'boolean'"
+			v-else-if="descriptor.control === 'boolean'"
 			:label="label"
 			:bp-badge="bpBadge"
 			:model-value="(modelValue as boolean | undefined)"
@@ -73,6 +93,7 @@ const localeBadge = props.locale ? props.locale.toUpperCase() : "";
 		<TextareaControl
 			v-else-if="descriptor.control === 'textarea'"
 			:model-value="(modelValue as string | undefined)"
+			:placeholder="descriptor.placeholder"
 			@update:model-value="emit('update:modelValue', $event)"
 		/>
 		<TextControl

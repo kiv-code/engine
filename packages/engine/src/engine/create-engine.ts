@@ -1,6 +1,10 @@
 import { createEventBus } from "../events";
 import type { MediaProvider } from "../media";
-import type { KivPlugin, PluginContext } from "../plugin";
+import type {
+	EditorExtensionPoints,
+	KivPlugin,
+	PluginContext,
+} from "../plugin";
 import { createRegistry } from "../registry";
 import type { ResolveContext } from "../resolver";
 import { resolveNode } from "../resolver";
@@ -29,6 +33,8 @@ export interface KivEngine {
 	use(plugin: KivPlugin): void;
 	css(): string;
 	resolve(node: KivNode, ctx: ResolveContext): ReturnType<typeof resolveNode>;
+	/** Set editor extension points so plugins can register UI. Triggers `onEditorReady` on all installed plugins. */
+	setEditorExtensions(ext: EditorExtensionPoints): void;
 }
 
 const DEFAULT_I18N: I18nConfig = {
@@ -44,6 +50,8 @@ export function createEngine(options: CreateEngineOptions = {}): KivEngine {
 	const media = options.media?.provider;
 	const services = options.services ?? {};
 	const installed = new Set<string>();
+	const installedPlugins: KivPlugin[] = [];
+	let editorExtensions: EditorExtensionPoints | null = null;
 
 	if (options.nodes) {
 		registry.registerMany(options.nodes);
@@ -62,14 +70,33 @@ export function createEngine(options: CreateEngineOptions = {}): KivEngine {
 			i18n,
 			media,
 			services,
+			editor: editorExtensions ?? undefined,
 		};
 		plugin.install(ctx);
 		installed.add(plugin.name);
+		installedPlugins.push(plugin);
 	}
 
 	if (options.plugins) {
 		for (const plugin of options.plugins) {
 			use(plugin);
+		}
+	}
+
+	function setEditorExtensions(ext: EditorExtensionPoints): void {
+		editorExtensions = ext;
+		bus.emit("editor.ready", undefined);
+		const ctx: PluginContext = {
+			bus,
+			registry,
+			theme,
+			i18n,
+			media,
+			services,
+			editor: ext,
+		};
+		for (const plugin of installedPlugins) {
+			plugin.onEditorReady?.(ctx);
 		}
 	}
 
@@ -85,5 +112,16 @@ export function createEngine(options: CreateEngineOptions = {}): KivEngine {
 		return resolveNode(node, ctx);
 	}
 
-	return { bus, registry, theme, i18n, media, services, use, css, resolve };
+	return {
+		bus,
+		registry,
+		theme,
+		i18n,
+		media,
+		services,
+		use,
+		css,
+		resolve,
+		setEditorExtensions,
+	};
 }

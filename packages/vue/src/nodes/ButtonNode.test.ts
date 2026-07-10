@@ -33,7 +33,10 @@ describe("ButtonNode", () => {
 			props: { label: "Outline", variant: "outline", fullWidth: true },
 		});
 		const style = wrapper.attributes("style") ?? "";
-		expect(style).toContain("background: transparent");
+		// The browser coalesces the separately-set `background` and
+		// `background-origin` longhands into the `background` shorthand when
+		// serializing back to a style string (order: origin, then color).
+		expect(style).toContain("background: border-box transparent");
 		expect(style).toContain("width: 100%");
 		expect(style).toContain("display: block");
 	});

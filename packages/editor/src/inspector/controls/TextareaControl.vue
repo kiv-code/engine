@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{ modelValue?: string }>();
+defineProps<{ modelValue?: string; placeholder?: string }>();
 defineEmits<{ "update:modelValue": [value: string] }>();
 </script>
 
@@ -9,6 +9,7 @@ defineEmits<{ "update:modelValue": [value: string] }>();
 		class="kiv-input"
 		style="resize: vertical;"
 		:value="modelValue ?? ''"
+		:placeholder="placeholder ?? ''"
 		@input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
 	/>
 </template>

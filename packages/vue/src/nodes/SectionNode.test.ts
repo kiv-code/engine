@@ -26,19 +26,17 @@ describe("SectionNode", () => {
 		expect(style).toContain("padding: 64px 32px");
 	});
 
-	it("renders the overlay div with color and opacity when overlay is enabled", () => {
+	it("renders the overlay div with a solid-or-gradient color when overlay is enabled", () => {
 		const wrapper = mount(SectionNode, {
 			props: {
 				overlay: true,
-				overlayColor: "rgba(1,2,3,0.5)",
-				overlayOpacity: 0.7,
+				overlayColor: { type: "solid", solid: "#010203", alpha: 0.5 },
 			},
 		});
 		const overlay = wrapper.find(".kiv-section__overlay");
 		expect(overlay.exists()).toBe(true);
 		const el = overlay.element as HTMLElement;
 		expect(el.style.background).toBe("rgba(1, 2, 3, 0.5)");
-		expect(el.style.opacity).toBe("0.7");
 	});
 
 	it("does not render the overlay or video background by default", () => {

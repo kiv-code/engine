@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { HEADING_LEVEL_SIZE, LETTER_SPACING, LINE_HEIGHT } from "@kiv/nodes";
+import {
+	HEADING_LEVEL_SIZE,
+	LETTER_SPACING,
+	LINE_HEIGHT,
+	resolveTextPaintStyle,
+} from "@kiv/nodes";
 import { computed } from "vue";
 
 const props = defineProps<{
@@ -7,7 +12,7 @@ const props = defineProps<{
 	level?: string;
 	size?: number;
 	weight?: string;
-	color?: string;
+	color?: unknown;
 	align?: string;
 	lineHeight?: string;
 	letterSpacing?: string;
@@ -19,7 +24,7 @@ const tag = computed(() => `h${props.level ?? "2"}`);
 const headingStyle = computed(() => ({
 	fontSize: `${props.size ?? HEADING_LEVEL_SIZE[props.level ?? "2"] ?? 36}px`,
 	fontWeight: props.weight ?? "700",
-	color: props.color ?? "inherit",
+	...resolveTextPaintStyle(props.color, "inherit"),
 	textAlign: (props.align ?? "left") as "left" | "center" | "right" | "justify",
 	lineHeight: LINE_HEIGHT[props.lineHeight ?? "normal"] ?? "1.4",
 	letterSpacing: LETTER_SPACING[props.letterSpacing ?? "normal"] ?? "0em",

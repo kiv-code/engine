@@ -25,4 +25,6 @@ export interface PluginContext {
 export interface KivPlugin {
 	name: string;
 	install(ctx: PluginContext): void;
+	/** Called when an editor mounts and extension points become available. `ctx.editor` is guaranteed to be set. */
+	onEditorReady?(ctx: PluginContext): void;
 }

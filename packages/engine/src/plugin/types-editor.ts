@@ -17,6 +17,7 @@ export interface PaletteItem {
 	type: string;
 	label: string;
 	icon?: string;
+	description?: string;
 	category?: string;
 }
 

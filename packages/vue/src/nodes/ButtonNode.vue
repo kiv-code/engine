@@ -5,6 +5,10 @@ import {
 	BUTTON_VARIANT,
 	type ButtonSizeStyle,
 	type ButtonVariantStyle,
+	resolveBackgroundPaint,
+	resolveIcon,
+	resolveSolidColor,
+	resolveTextPaintStyle,
 } from "@kiv/nodes";
 import { computed, getCurrentInstance, inject } from "vue";
 import { KIV_BUS_KEY } from "../bus";
@@ -14,6 +18,8 @@ const props = defineProps<{
 	nodeId?: string;
 	label?: string;
 	icon?: string;
+	iconSize?: number;
+	iconColor?: string;
 	iconPosition?: string;
 	href?: string;
 	target?: string;
@@ -24,13 +30,8 @@ const props = defineProps<{
 	align?: string;
 	borderRadius?: string;
 	fontWeight?: string;
-	backgroundType?: string;
-	customBackground?: string;
-	gradientFrom?: string;
-	gradientMiddle?: string;
-	gradientTo?: string;
-	gradientAngle?: number;
-	customColor?: string;
+	background?: unknown;
+	textColor?: unknown;
 	customBorderColor?: string;
 }>();
 
@@ -97,28 +98,34 @@ const variantStyle = computed(
 		BUTTON_VARIANT[props.variant ?? "primary"] ?? DEFAULT_VARIANT,
 );
 
-// Icon: raw SVG (starts with "<") is injected via v-html; anything else is
-// treated as an icon-font class (<i class="...">). Empty = no icon.
 const hasIcon = computed(() => !!props.icon?.trim());
-const iconIsSvg = computed(() => props.icon?.trim().startsWith("<") ?? false);
+const resolvedSvg = computed(() => resolveIcon(props.icon ?? ""));
+const iconSizePx = computed(() => props.iconSize ?? 16);
+const iconIsSvg = computed(
+	() => (props.icon?.trim().startsWith("<") ?? false) || !!resolvedSvg.value,
+);
+const iconContent = computed(() => {
+	if (resolvedSvg.value) return resolvedSvg.value;
+	if (props.icon?.trim().startsWith("<")) return props.icon;
+	return "";
+});
 const iconClass = computed(() => (iconIsSvg.value ? "" : (props.icon ?? "")));
 const iconOnRight = computed(() => props.iconPosition === "right");
 
-// Per-button escape hatch. Priority: gradient → custom solid → variant/theme.
-const bgFinal = computed(() => {
-	if (props.backgroundType === "gradient") {
-		const angle = props.gradientAngle ?? 135;
-		const from = props.gradientFrom || "#6366f1";
-		const to = props.gradientTo || "#a855f7";
-		// Middle stop is optional — include it only when set.
-		const middle = props.gradientMiddle?.trim();
-		const stops = middle ? `${from}, ${middle}, ${to}` : `${from}, ${to}`;
-		return `linear-gradient(${angle}deg, ${stops})`;
-	}
-	return props.customBackground || variantStyle.value.background;
-});
-const colorFinal = computed(
-	() => props.customColor || variantStyle.value.color,
+// Per-button escape hatch, shared across every node with solid-or-gradient
+// paint (see packages/nodes/src/color-gradient.ts). Empty solid → inherit
+// variant/theme.
+const bgFinal = computed(() =>
+	resolveBackgroundPaint(props.background, variantStyle.value.background),
+);
+// Plain solid fallback for icon inheritance — a gradient text fill only
+// applies to the label span (see labelStyle) via background-clip, which
+// would conflict with the button's own background if applied here.
+const colorFinal = computed(() =>
+	resolveSolidColor(props.textColor, variantStyle.value.color),
+);
+const labelStyle = computed(() =>
+	resolveTextPaintStyle(props.textColor, variantStyle.value.color),
 );
 const borderFinal = computed(() =>
 	props.customBorderColor
@@ -151,6 +158,12 @@ const buttonStyle = computed(() => ({
 	lineHeight: "1",
 	whiteSpace: "nowrap" as const,
 	background: bgFinal.value,
+	// Default background-origin is padding-box: with a 2px transparent
+	// border, the gradient gets sized to the smaller padding-box area and
+	// then tiles (default background-repeat) to fill the extra border-box
+	// strip — a visible seam right at the edges. border-box makes the
+	// gradient size to (and paint under) the border directly, no seam.
+	backgroundOrigin: "border-box" as const,
 	color: colorFinal.value,
 	border: borderFinal.value,
 }));
@@ -193,16 +206,38 @@ function onClick(e: MouseEvent) {
 	>
 		<!-- Icon before label -->
 		<template v-if="hasIcon && !iconOnRight">
-			<span v-if="iconIsSvg" class="kiv-btn-icon" v-html="icon" />
-			<i v-else :class="iconClass" class="kiv-btn-icon" aria-hidden="true" />
+			<span
+				v-if="iconIsSvg"
+				class="kiv-btn-icon"
+				:style="{ fontSize: iconSizePx + 'px', color: iconColor || undefined }"
+				v-html="iconContent"
+			/>
+			<i
+				v-else
+				:class="iconClass"
+				class="kiv-btn-icon"
+				:style="{ fontSize: iconSizePx + 'px', color: iconColor || undefined }"
+				aria-hidden="true"
+			/>
 		</template>
 
-		<span v-if="label">{{ label }}</span>
+		<span v-if="label" :style="labelStyle">{{ label }}</span>
 
 		<!-- Icon after label -->
 		<template v-if="hasIcon && iconOnRight">
-			<span v-if="iconIsSvg" class="kiv-btn-icon" v-html="icon" />
-			<i v-else :class="iconClass" class="kiv-btn-icon" aria-hidden="true" />
+			<span
+				v-if="iconIsSvg"
+				class="kiv-btn-icon"
+				:style="{ fontSize: iconSizePx + 'px', color: iconColor || undefined }"
+				v-html="iconContent"
+			/>
+			<i
+				v-else
+				:class="iconClass"
+				class="kiv-btn-icon"
+				:style="{ fontSize: iconSizePx + 'px', color: iconColor || undefined }"
+				aria-hidden="true"
+			/>
 		</template>
 	</component>
 </template>
@@ -217,5 +252,6 @@ function onClick(e: MouseEvent) {
 	width: 1em;
 	height: 1em;
 	display: block;
+	vertical-align: middle;
 }
 </style>

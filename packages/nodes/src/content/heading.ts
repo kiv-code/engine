@@ -1,4 +1,5 @@
 import { defineNode, f } from "@kiv/engine";
+import { colorOrGradientField, resolveTextPaintStyle } from "../color-gradient";
 import { escapeHtml, styleToString } from "../html-utils";
 import { HEADING_LEVEL_SIZE, LETTER_SPACING, LINE_HEIGHT } from "../scales";
 
@@ -10,7 +11,7 @@ export const headingNode = defineNode({
 		const style = styleToString({
 			fontSize: `${props.size ?? HEADING_LEVEL_SIZE[level] ?? 36}px`,
 			fontWeight: String(props.weight ?? "700"),
-			color: String(props.color ?? "inherit"),
+			...resolveTextPaintStyle(props.color, "inherit"),
 			textAlign: String(props.align ?? "left"),
 			lineHeight: LINE_HEIGHT[String(props.lineHeight ?? "normal")] ?? "1.4",
 			letterSpacing:
@@ -44,7 +45,11 @@ export const headingNode = defineNode({
 			responsive: true,
 			group: "Typography",
 		}),
-		color: f.color({ label: "Color", default: "#000000", group: "Typography" }),
+		color: colorOrGradientField({
+			label: "Color",
+			group: "Typography",
+			default: { solid: "#000000" },
+		}),
 		align: f.select(["left", "center", "right", "justify"], {
 			label: "Align",
 			default: "left",

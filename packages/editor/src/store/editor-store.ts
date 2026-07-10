@@ -64,7 +64,7 @@ export function useEditorStore(
 	const canUndo = ref(engine.canUndo);
 	const canRedo = ref(engine.canRedo);
 	const selectedId = ref<string | null>(null);
-	const breakpoint = ref<Breakpoint>("base");
+	const breakpoint = ref<Breakpoint>("lg");
 	const locale = ref<string>(initialDocument.i18n?.default ?? "en");
 
 	engine.bus.on("history.changed", (state) => {

@@ -5,12 +5,13 @@ import type { VueRegistry } from "@kiv/vue";
 import { KivRenderer } from "@kiv/vue";
 import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
 import { useInlineEdit } from "../composables/useInlineEdit";
-import { EDITOR_STORE_KEY } from "../store/context";
+import { EDITOR_EXTENSIONS_KEY, EDITOR_STORE_KEY } from "../store/context";
 import { getNodeLabelShort } from "../utils/node-labels";
 
 defineProps<{ registry: VueRegistry }>();
 
 const store = inject(EDITOR_STORE_KEY);
+const extensions = inject(EDITOR_EXTENSIONS_KEY, null);
 const canvasRef = ref<HTMLElement | null>(null);
 const stageRef = ref<HTMLElement | null>(null);
 const hoveredId = ref<string | null>(null);
@@ -135,6 +136,17 @@ function onKeydown(e: KeyboardEvent) {
 
 	const selected = store?.selected.value;
 	const selectedLocked = selected ? isLocked(selected.id) : false;
+
+	// First, check plugin-registered shortcuts
+	if (extensions) {
+		for (const sc of extensions.getKeyboardShortcuts()) {
+			if (sc.keys === e.key.toLowerCase() || sc.keys === e.code) {
+				e.preventDefault();
+				sc.onTrigger();
+				return;
+			}
+		}
+	}
 
 	if (
 		(e.key === "Delete" || e.key === "Backspace") &&

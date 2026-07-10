@@ -44,4 +44,10 @@ export interface FieldDescriptor<T = unknown> {
 	required?: boolean;
 	/** Hides the field from the inspector (for system props). */
 	hidden?: boolean;
+	/**
+	 * Override the control with a plugin-registered custom control name.
+	 * If set, the editor checks extension points for a control with this name
+	 * and renders it instead of the default control type.
+	 */
+	pluginControl?: string;
 }

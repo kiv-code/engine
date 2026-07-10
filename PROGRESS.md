@@ -149,6 +149,282 @@ omitted. Fixed with `withDefaults(defineProps<...>(), { centered: true })`.
   gated on `linkType === "internal"`, so the warning is gone when no router is installed and
   `RouterLink` still resolves correctly when a consumer app does install vue-router.
 
+## Icon system cleanup (`IconPicker` / `IconNode` / `ButtonNode`)
+
+`opencode` had added an `IconPicker.vue` inspector control with size/color sliders embedded
+directly in the picker (writing `iconSize`/`iconColor` props on whatever node is selected), plus a
+standalone `icon` node and icon support on `button`. Found and fixed three real bugs while
+reconciling that work:
+
+- **`icon.ts`/`IconNode.vue` prop mismatch:** the embedded picker always writes `iconSize`/
+  `iconColor`, but `iconNode`'s `toHtml` and `IconNode.vue` still read `props.size`/`props.color` —
+  the slider/color-picker in the Inspector had no effect on a standalone Icon node at all. Renamed
+  both to `iconSize`/`iconColor` throughout.
+- **Duplicate fields:** `icon.ts` still declared separate `size`/`color` field descriptors, and
+  `button.ts` still declared separate `iconSize`/`iconColor` field descriptors — both redundant
+  with the sliders `IconPicker` already renders inline for the `icon` field. Removed both; verified
+  via `packages/nodes/src/nodes.test.ts`'s "defaults satisfy schema" test (still passes) and by
+  confirming `schema.parse`/`safeParse` is never called on live document props outside tests, so
+  dropping the field descriptors doesn't cause Zod to silently strip the prop values on save/render.
+- **`IconNode.vue`'s SVG never scaled:** `[data-kiv-type="icon"] :deep(svg)` had `display:block` but
+  no `width`/`height`, so a pasted/resolved SVG rendered at its own intrinsic size — the "Size"
+  slider only affected icon-*font* (`<i>`) icons via `font-size`, never raw SVG icons. Added
+  `width:1em;height:1em` (same pattern as `ButtonNode.vue`'s existing `.kiv-btn-icon :deep(svg)`
+  rule). Verified live: before the fix an SVG icon ignored the size slider entirely; after, it
+  tracks 24px → 64px correctly.
+- Also removed an unused `searchIcons` import in `IconPicker.vue` (build-time warning, not a bug).
+
+## Divider node: "Style"/"Alignment" fields had no visual effect
+
+The `divider` node (another `opencode` addition) exposes `lineStyle` (solid/dashed/dotted/double)
+and `alignment` (left/center/right) fields in the Inspector, but neither did anything:
+
+- **`lineStyle` was never read.** The line was rendered as a plain `<div>` with `background: color`
+  and `height: {thickness}px` — a solid-fill box can only ever look solid; `border-style` is the
+  only way to render dashed/dotted/double. Fixed both `DividerNode.vue` and `divider.ts`'s `toHtml`
+  to use `border-top: {thickness}px {lineStyle} {color}` with `height: 0` instead of a filled box.
+- **`alignment` had no effect either.** The line `<div>` was block-level; `text-align` on the parent
+  only affects inline/inline-block children, so setting alignment to `left`/`right` on anything
+  narrower than 100% width did nothing visible. Initially fixed with `display: inline-block` on the
+  line, but that reintroduced a worse bug (see below) once nested inside a flex container.
+- **Nested-inside-a-flex-Group regression:** an `inline-block` child with a percentage `width` needs
+  its containing block's width to already be resolved. The wrapper `<div>` was plain `block` with no
+  explicit width, so when the divider sat inside a `Group` (flex) node, the wrapper — now a flex item
+  with no declared width — sized itself to its own content (`flex-basis: auto`), which in turn was
+  the percentage-width line depending on the wrapper. That circular dependency resolves to `0px` in
+  every browser, so the divider visually disappeared (matches the report: "lo pierdo dentro de un
+  Group"). Fixed by making the *wrapper* `display:flex; width:100%` (an explicit, non-circular width)
+  and moving alignment to `justify-content` (`flex-start`/`center`/`flex-end`) instead of
+  `text-align`/`inline-block` on the line. This also makes the divider robust regardless of the
+  parent's own layout mode (block, flex-row, or flex-column) since the wrapper always claims 100% of
+  whatever box it's given rather than depending on ancestor stretch/shrink-to-fit behavior.
+- Verified live: standalone, `lineStyle: "dashed"` renders `border-top-style: dashed`; `width: "50%"`
+  + `alignment: "right"` flushes the line's right edge to the wrapper's right edge (0px gap). Nested
+  inside a `Group` with `direction: "row"`, the wrapper still resolves to the group's full width
+  (897px) and the line to the correct 50% of that (448.5px) — no longer collapses to 0.
+
+## Reusable color/gradient system (`f.colorOrGradient` equivalent)
+
+Requested: consolidate the solid-vs-gradient color pattern (background, text, borders — used ad
+hoc on `button` for backgrounds only) into one reusable field type + control, usable by any node
+that needs solid-or-gradient paint (text, background, buttons, and future nodes like Heading/Section).
+
+**New:** `packages/nodes/src/color-gradient.ts` — the canonical, framework-agnostic piece:
+- `ColorOrGradientValue` — `{ type: "solid"|"gradient", solid, from, middle, to, angle }`, stored as
+  a single composite prop instead of N raw fields with manual `showIf` wiring.
+- `colorOrGradientField(opts)` — a `FieldDescriptor` factory with `pluginControl: "color-gradient"`,
+  following the exact same plugin-control pattern as the earlier `icon-picker` (Golden Rule #7: no
+  `@kiv/engine` changes needed — `FieldControl`'s `pluginControl` override already supported this).
+- `resolveBackgroundPaint(value, fallback)` — solid or gradient, both valid as a plain `background`.
+- `resolveSolidColor(value, fallback)` — ignores gradient state; for contexts that can't render a
+  gradient (icon inheritance, borders).
+- `resolveTextPaintStyle(value, fallback)` — text color needs the `background-clip: text` trick for
+  gradients (can't assign a gradient to `color` directly), which claims the element's own
+  `background` — so this must be applied to a dedicated text element (e.g. the label `<span>`),
+  never to an element that also has its own background fill (would conflict with the button's own
+  background paint).
+
+**New:** `packages/editor/src/inspector/controls/ColorGradientControl.vue` — Solid/Gradient tabs,
+a checkerboard preview swatch, From/Middle/To color pickers + angle slider for gradient mode.
+Registered once in `KivEditor.vue` (`extensions.addFieldControl("color-gradient", ColorGradientControl)`),
+same mechanism as `icon-picker`.
+
+**Migrated:** `button.ts` — replaced 7 raw fields (`backgroundType`, `customBackground`,
+`gradientFrom`, `gradientMiddle`, `gradientTo`, `gradientAngle`, `customColor`) with 2 composite
+fields (`background`, `textColor`). `ButtonNode.vue` and `toHtml` both updated to call the shared
+resolvers instead of hand-rolling gradient CSS. `packages/nodes` gained a direct `zod` dependency
+(previously only re-exported `FieldDescriptor`'s type from `@kiv/engine`, never constructed a
+schema itself).
+
+**Bug found while wiring this up:** `styleToString`'s `kebabCase()` converts `webkitBackgroundClip`
+→ `webkit-background-clip`, but vendor-prefixed CSS properties need a *leading* dash
+(`-webkit-background-clip`) — the regex has nothing to match against before the first character, so
+it can't insert one. The result is invalid CSS that browsers silently drop. This didn't affect the
+live Vue-rendered button (Vue's own style-patching normalizes vendor prefixes), only the static
+`toHtml()` export — confirmed via the exported HTML containing `webkit-background-clip: text;`
+(broken) before the fix and `-webkit-background-clip: text;` (correct) after. Fixed by special-
+casing `webkit|moz|ms|o` prefixes in `kebabCase()`.
+
+Verified live: button background gradient renders (`linear-gradient(135deg, #6366f1, #a855f7)`);
+button text gradient renders via `background-clip: text` + `color: transparent` on the label span
+only (not the whole button, which still has its own solid/gradient fill); the exported HTML matches
+byte-for-byte once the vendor-prefix fix landed.
+
+## Rolling out color-gradient to Section and Heading + opacity support
+
+Extended the same reusable field to the two other highest-value spots, and closed a related gap:
+
+- **`ColorOrGradientValue` gained an `alpha` field** (0–1, default 1) for the solid branch, with a
+  `withAlpha(hex, alpha)` helper that converts `#rgb`/`#rrggbb` → `rgba(...)` only when `alpha < 1`
+  (stays plain hex otherwise, so existing snapshots/tests that expect bare hex are untouched).
+  `ColorGradientControl.vue` got an Opacity slider under the Solid tab; the checkerboard preview
+  swatch now calls `resolveBackgroundPaint()` directly instead of duplicating the gradient-CSS logic.
+- **`section.ts` / `SectionNode.vue`:** merged `background` + the old free-text `gradient` field into
+  one `background: colorOrGradientField()` — solid sets `background-color`, gradient sets
+  `background-image` (gradient still wins over an uploaded background image, preserving the old
+  field's precedence). Merged `overlayColor` (`f.color`) + `overlayOpacity` (`f.number`, applied as a
+  *second*, independent layer-opacity multiplier) into one `overlayColor: colorOrGradientField()`
+  whose alpha slider now controls transparency directly — this also fixes a latent double-opacity
+  wrinkle in the old design (the default `overlayColor` was already `rgba(0,0,0,0.4)` *and*
+  `overlayOpacity` defaulted to another `0.4` multiplied on top).
+- **`heading.ts` / `HeadingNode.vue`:** `color: f.color()` → `color: colorOrGradientField()`. Unlike
+  Button, a heading's own tag *is* the text with no separate background fill to conflict with, so
+  `resolveTextPaintStyle()` is spread directly onto the `<hN>` element's style — no extra wrapper span
+  needed.
+- Updated `nodes.test.ts`'s "section schema accepts valid props" (needed a full composite object,
+  not a bare hex string) and `SectionNode.test.ts`'s overlay test (dropped the now-nonexistent
+  `overlayOpacity` prop) to match the new shape.
+
+Verified live: Heading text gradient renders directly on the `<h1>` (no wrapper element); Section
+overlay defaults to `rgba(0, 0, 0, 0.4)` with no `overlayOpacity` prop at all; setting the overlay
+color's own opacity slider to `0.8` (after giving it an explicit solid color — an empty/"inherit"
+solid has nothing to apply alpha to, by design) produces `rgba(0, 0, 0, 0.8)` on the rendered overlay.
+
+**Scoped out on purpose:** `Divider`'s line color stays plain solid (`f.color()`, unchanged). Its
+`lineStyle` (dashed/dotted/double) is implemented via `border-style`, which needs a single flat
+`border-color` — a gradient there would require switching to a `background-image` + height trick
+that can't simultaneously honor `border-style`'s dash/dot patterns. Border colors (`customBorderColor`
+on Button, `borderColor` on Section) were left as-is too — gradients on a 1–2px border or a small
+icon aren't visually worth the added Inspector complexity.
+
+## Two color-picker bugs found via real usage, fixed
+
+Reported after trying it in practice: opacity had no visible effect on a *background* field, in
+either solid or gradient mode (only text seemed to work).
+
+- **Gradient mode never applied opacity at all.** The single `alpha` slider only rendered inside the
+  Solid tab — Gradient mode had no opacity control anywhere, so it silently did nothing whether the
+  field was background, text, or anything else. Fixed by giving each gradient stop its own opacity:
+  `ColorOrGradientValue` gained `fromAlpha`/`middleAlpha`/`toAlpha` (each 0–1, default 1), and
+  `gradientCss()` now calls `withAlpha()` per stop instead of ignoring alpha entirely in gradient
+  mode. `ColorGradientControl.vue`'s Gradient tab shows an Opacity slider under each of From/Middle/To
+  (Middle's stays hidden until a middle color is actually set) — this matches how every real design
+  tool handles gradient transparency (per-stop, not one global slider).
+- **Solid mode's opacity slider silently no-op'd on an "inherit" (empty) color.** `solid: ""` means
+  "no override, inherit the theme/variant" — `solidPaint()` correctly returns the fallback untouched
+  in that case, since there's no actual color to apply alpha to. But the swatch UI shows a `#000000`
+  placeholder purely so the native `<input type="color">` has something to render, which visually
+  implies a real color is already active — dragging the opacity slider looked like it should do
+  something, but silently changed nothing underneath. This is exactly the bug that made it look like
+  "opacity doesn't work on background" during testing: the background field had never had an
+  explicit color set. Fixed by having the slider commit that same `#000000` fallback as the real
+  `solid` value the moment it's touched (`setSolidAlpha()` in `ColorGradientControl.vue`), so the
+  slider always has a color to act on instead of quietly doing nothing.
+
+Verified live: gradient background with `fromAlpha: 0.3` renders
+`linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgb(168, 85, 247))` — first stop faded, second
+stop still opaque. Solid text color, opacity slider moved to `0.5` **without ever touching the hex
+input**, renders `rgba(0, 0, 0, 0.5)` — previously this combination (opacity-only, no explicit color)
+produced no visible change at all.
+
+## Data-corrupting bug found testing Section overlay over a background image
+
+Reproducing "Section with a background image + overlay, both solid and gradient opacity" surfaced a
+worse, silent data-corruption bug — unrelated to the opacity work itself.
+
+- **`ColorGradientControl.vue` naively spread `modelValue`:** `{...DEFAULT_COLOR_OR_GRADIENT,
+  ...(props.modelValue ?? {})}`. This works for a real composite object, but every node created
+  *before* this migration still stores its color prop as a **plain hex string**
+  (`background: "#0f172a"`, straight from `demo-document.ts`) — and spreading a STRING via `{...str}`
+  iterates its characters as array indices, producing `{0: "#", 1: "0", 2: "f", ...}` merged in
+  alongside the default object's `type`/`solid`/`alpha` keys. The corrupted shape then got written
+  straight back to the document on the next edit (even an unrelated one, e.g. typing a background
+  image URL), permanently replacing the clean string with garbage.
+  Fixed by exporting `normalizeColorOrGradient()` from `@kiv/nodes` (the same string/object/undefined
+  handling the resolvers already used internally) and having the control call that instead of
+  spreading `modelValue` directly — legacy plain-string props now normalize cleanly into
+  `{ type: "solid", solid: "#0f172a", ... }` without ever touching the raw value unsafely.
+- **Found only because "Reset" looked like it wasn't resetting.** `KivEditor.vue`'s internal store is
+  constructed once from the initial `document` prop at mount time and never reactively reinitializes
+  when that prop changes later — so `apps/demos/vue`'s "Reset" button (which just replaces the
+  parent's `doc` ref) doesn't actually reset an already-mounted editor session; it only affects the
+  *next* mount. Corrupted state from an earlier test kept reappearing after clicking Reset, surviving
+  even a full page reload and dev-server restart, because both just remounted from the same
+  already-corrupted `localStorage` entry. Not fixed (documenting as a known demo-app limitation, not
+  an engine bug) — worked around for testing via `localStorage.clear()` before reload.
+
+Verified live end-to-end on a Section with an uploaded background image + overlay enabled:
+`background` stayed the clean string `"#0f172a"` through the whole session (never corrupted);
+overlay solid `#ff0000` @ 60% → `rgba(255, 0, 0, 0.6)` over the image; overlay gradient with
+`fromAlpha: 0.2` / `toAlpha: 0.9` → `linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85,
+247, 0.9))`, visibly fading from transparent to opaque across the image in a screenshot.
+
+## Button gradient background had a visible seam at the edges
+
+Reported: a button with a gradient background looked like the color didn't quite reach the sides.
+
+Root cause: `background-origin` defaults to `padding-box`, but the button also has
+`border: 2px solid transparent` (the theme's default border, invisible but still present in the box
+model). With origin=padding-box and clip=border-box (also default), the gradient image is *sized* to
+the smaller padding-box area, then — because `background-repeat` defaults to `repeat` — tiles to fill
+the extra border-box strip, producing a visible seam right at the 2px edge. Classic CSS gotcha
+whenever a transparent border is combined with a gradient background and `background-origin` isn't
+set explicitly.
+
+Fixed by adding `background-origin: border-box` to `ButtonNode.vue`'s `buttonStyle` and
+`button.ts`'s `toHtml` (and preventively to `Section`'s gradient background, since Section can also
+combine a border with a gradient via `borderWidth` + `background`). Verified live:
+`getComputedStyle(button).backgroundOrigin === "border-box"`, gradient renders edge-to-edge with no
+seam in a screenshot. One test (`ButtonNode.test.ts`) needed updating — the browser coalesces the
+separately-set `background`/`background-origin` longhands back into the `background` shorthand when
+serializing the style attribute (`background: border-box transparent`, not `background: transparent`
+anymore) — a serialization detail, not a behavior change.
+
+## Real bug found while testing the button fix: Inspector panel crashes for any button without an icon
+
+While re-verifying the button gradient, selecting a completely fresh button (no `icon` ever set —
+true for every button in `demo-document.ts`) made the *entire* Inspector panel render nothing at all,
+not just the icon field.
+
+`IconPicker.vue` declared `modelValue: string` (required) but nothing enforces that at runtime — a
+node that never had its `icon` prop set passes `undefined`, and `props.modelValue.trim()` in the
+component's `setup()` threw immediately. Vue has no error boundary around a child's `setup()`, so the
+crash propagated all the way up through `FieldControl` → `KivInspector`, unmounting every field for
+every group, not just the broken one. This is very easy to miss during development, because any
+document with at least one icon already set (e.g. from earlier manual testing, autosaved to
+`localStorage`) never triggers it — it only shows up on a genuinely fresh document, which is exactly
+what a new user's first session looks like.
+
+Fixed with `withDefaults(defineProps<...>(), { modelValue: "" })` so every reference in the file can
+safely assume a string. Verified live: selecting "Get started" (no icon) on a freshly-cleared
+`localStorage` no longer throws, and the Inspector renders all its fields normally.
+
+## Group (Stack) node: independent padding/margin/border per side
+
+Requested: make Group more flexible for custom styling — independent padding/margin per side (not
+just Y/X), and independent borders (width + one shared color) per side.
+
+- Kept the existing `paddingY`/`paddingX` scale-based shorthands (quick common case) and added
+  `marginY`/`marginX` alongside them (Stack had no margin support at all before).
+- Added 8 free-text per-side override fields (`paddingTop/Right/Bottom/Left`,
+  `marginTop/Right/Bottom/Left`, group `"Spacing (advanced)"`) — accepts any CSS length (`"40px"`,
+  `"2rem"`, `"5%"`). Empty (default) falls back to the Y/X shorthand for that side; a shared `side()`
+  helper (duplicated once in `stack.ts` for `toHtml`, once in `StackNode.vue` for the live render —
+  same pattern as other nodes' toHtml/Vue pairs) implements the override-or-fallback logic.
+- Added independent `borderTopWidth/RightWidth/BottomWidth/LeftWidth` (px, 0 = no border on that
+  side) + one shared `borderStyle` (solid/dashed/dotted/double) and `borderColor` — matches the
+  earlier decision (see the button/icon color-gradient section above) that borders stay plain solid,
+  no gradient support. `box-sizing: border-box` is applied automatically whenever any side has a
+  border, so adding a border doesn't change the box's outer footprint.
+
+**Real, pre-existing bug found while verifying this:** none of the new fields showed up in the
+Inspector at all. `KivInspector.vue`'s `groupedFields` computed filters every field's `group` through
+a hardcoded `GROUP_ORDER` whitelist — any group name not in that list is **silently dropped**, not
+just unordered. `"Spacing"` (used by Stack's *original*, pre-existing `paddingY`/`paddingX` fields,
+before any of today's changes) was never in that list, so those two fields have likely been invisible
+in the Inspector since Stack was first built — this wasn't a regression from today's work, just newly
+noticed because the missing group suddenly mattered. Fixed two ways: (1) `groupedFields` now appends
+any group not in `GROUP_ORDER` at the end instead of dropping it, so no future group name can vanish
+silently again; (2) added `"Spacing"` and `"Spacing (advanced)"` to the curated list directly (right
+after `"Layout"`) so they get sensible positioning instead of always trailing at the end.
+
+Verified live: added a new Group node, set `Padding top: 40px` → confirmed
+`getComputedStyle(el).paddingTop === "40px"` (after rebuilding `@kiv/vue`'s dist — a second instance
+this session of forgetting the build step after a source edit, since the demo app consumes the built
+dist, not source). Set `Border top: 2`, `Border left: 4`, `Border color: #ff0066` → confirmed
+`borderTop: "2px solid rgb(255, 0, 102)"`, `borderLeft: "4px solid rgb(255, 0, 102)"`,
+`borderRight: "0px solid ..."` (untouched side stays at 0) on the live element.
+
 ## Verification (last full run)
 
 ```

@@ -13,6 +13,7 @@ interface BaseOptions<T> {
 	hint?: string;
 	required?: boolean;
 	hidden?: boolean;
+	pluginControl?: string;
 }
 
 function text(opts: BaseOptions<string> = {}): FieldDescriptor<string> {

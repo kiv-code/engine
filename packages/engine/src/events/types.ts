@@ -5,6 +5,7 @@
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface KivEventMap {
 	[event: string]: unknown;
+	"editor.ready": undefined;
 }
 
 export type EventHandler<P> = (payload: P) => void;

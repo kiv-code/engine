@@ -1,17 +1,30 @@
 <script setup lang="ts">
-import { BLUR, RADIUS, SECTION_SPACING, SHADOW } from "@kiv/nodes";
+import {
+	BLUR,
+	RADIUS,
+	resolveBackgroundPaint,
+	resolveSolidColor,
+	SECTION_SPACING,
+	SHADOW,
+} from "@kiv/nodes";
 import { computed } from "vue";
 
+function isGradient(value: unknown): boolean {
+	return (
+		!!value &&
+		typeof value === "object" &&
+		(value as { type?: string }).type === "gradient"
+	);
+}
+
 const props = defineProps<{
-	background?: string;
+	background?: unknown;
 	backgroundImage?: string;
 	backgroundVideo?: string;
 	backgroundSize?: string;
 	backgroundPosition?: string;
 	overlay?: boolean;
-	overlayColor?: string;
-	overlayOpacity?: number;
-	gradient?: string;
+	overlayColor?: unknown;
 	blur?: string;
 	opacity?: number;
 	paddingY?: string;
@@ -30,16 +43,21 @@ const props = defineProps<{
 const sectionStyle = computed(() => {
 	const s: Record<string, string> = {};
 
-	if (props.background && props.background !== "transparent") {
-		s.backgroundColor = props.background;
-	}
+	const solidBg = resolveSolidColor(props.background, "");
+	if (solidBg) s.backgroundColor = solidBg;
 	if (props.backgroundImage) {
 		s.backgroundImage = `url(${props.backgroundImage})`;
 		s.backgroundSize = props.backgroundSize ?? "cover";
 		s.backgroundPosition = props.backgroundPosition ?? "center";
 	}
-	if (props.gradient) {
-		s.backgroundImage = props.gradient;
+	// Gradient wins over an image background, matching the previous
+	// (pre-migration) precedence of the standalone "gradient" field.
+	if (isGradient(props.background)) {
+		s.backgroundImage = resolveBackgroundPaint(props.background, "");
+		// Default background-origin is padding-box: paired with a border
+		// (borderWidth > 0), the gradient sizes to the smaller padding-box
+		// area then tiles to fill the border strip, leaving a visible seam.
+		s.backgroundOrigin = "border-box";
 	}
 	if (props.opacity !== undefined && props.opacity !== 1) {
 		s.opacity = String(props.opacity);
@@ -110,7 +128,7 @@ const contentStyle = computed(() => ({
 		<div
 			v-if="overlay"
 			class="kiv-section__overlay"
-			:style="{ background: overlayColor ?? 'rgba(0,0,0,0.4)', opacity: String(overlayOpacity ?? 0.4) }"
+			:style="{ background: resolveBackgroundPaint(overlayColor, 'rgba(0, 0, 0, 0.4)') }"
 		/>
 		<div class="kiv-section__content" :style="contentStyle">
 			<slot />

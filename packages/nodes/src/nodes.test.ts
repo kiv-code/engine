@@ -5,6 +5,7 @@ import {
 	buttonNode,
 	columnNode,
 	containerNode,
+	DEFAULT_COLOR_OR_GRADIENT,
 	gridNode,
 	headingNode,
 	imageNode,
@@ -15,13 +16,13 @@ import {
 } from "./index";
 
 describe("ALL_NODES", () => {
-	it("contains 10 nodes", () => {
-		expect(ALL_NODES).toHaveLength(10);
+	it("contains 15 nodes", () => {
+		expect(ALL_NODES).toHaveLength(15);
 	});
 
 	it("all nodes have unique types", () => {
 		const types = ALL_NODES.map((n) => n.type);
-		expect(new Set(types).size).toBe(10);
+		expect(new Set(types).size).toBe(15);
 	});
 
 	it("registers without errors into a Registry", () => {
@@ -115,10 +116,10 @@ describe("media nodes", () => {
 describe("node schemas", () => {
 	it("section schema accepts valid props", () => {
 		const result = sectionNode.schema.safeParse({
-			background: "#fff",
+			background: { ...DEFAULT_COLOR_OR_GRADIENT, solid: "#fff" },
 			paddingY: "lg",
 			overlay: true,
-			overlayColor: "rgba(0,0,0,0.5)",
+			overlayColor: { ...DEFAULT_COLOR_OR_GRADIENT, solid: "#000", alpha: 0.5 },
 		});
 		expect(result.success).toBe(true);
 	});
