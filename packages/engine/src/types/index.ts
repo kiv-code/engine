@@ -1,4 +1,4 @@
-export type { I18nConfig, KivDocument } from "./document";
+export type { I18nConfig, KivDocument, SeoMeta } from "./document";
 export type { KivNode } from "./node";
 export type {
 	Breakpoint,

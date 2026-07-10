@@ -5,11 +5,19 @@ import { BUTTON_RADIUS, BUTTON_SIZE, BUTTON_VARIANT } from "../scales";
 export const linkNode = defineNode({
 	type: "link",
 	category: "content",
-	toHtml(props) {
+	toHtml(props, children) {
 		const href = escapeHtml(props.href ?? "#");
 		const target = String(props.target ?? "_self");
 		const rel = target === "_blank" ? ' rel="noopener noreferrer"' : "";
-		const text = props.text !== undefined ? escapeHtml(props.text) : "Link";
+		// Slotted children (icon/image/text nodes) win over the flat `text`
+		// field — the field is only a fallback for links with no children,
+		// which keeps documents saved before slots existed rendering unchanged.
+		const slotContent = children?.default;
+		const content = slotContent
+			? slotContent
+			: props.text !== undefined
+				? escapeHtml(props.text)
+				: "Link";
 		const isButton = props.display === "button";
 
 		let style: string;
@@ -48,7 +56,7 @@ export const linkNode = defineNode({
 			});
 		}
 
-		return `<a href="${href}" target="${escapeHtml(target)}"${rel} style="${style}" data-kiv-type="link">${text}</a>`;
+		return `<a href="${href}" target="${escapeHtml(target)}"${rel} style="${style}" data-kiv-type="link">${content}</a>`;
 	},
 	fields: {
 		text: f.text({

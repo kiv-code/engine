@@ -10,6 +10,8 @@ import { useResizablePanel } from "../composables/useResizablePanel";
 import FieldControl from "../inspector/FieldControl.vue";
 import { EDITOR_EXTENSIONS_KEY, EDITOR_STORE_KEY } from "../store/context";
 import { getNodeLabel } from "../utils/node-labels";
+import { mergeResponsiveValue } from "../utils/responsive-value";
+import { isHiddenAtBreakpoint } from "../utils/visibility";
 
 const props = defineProps<{ registry: Registry }>();
 const store = inject(EDITOR_STORE_KEY);
@@ -26,10 +28,14 @@ const { width, startResize } = useResizablePanel({
 const pluginTabNames = ref<string[]>([]);
 const activePluginTab = ref<string | null>(null);
 
-// Keep the list of plugin tab names in sync when extensions are available
+// Keep the list of plugin tab names in sync as plugins register (typically
+// from onEditorReady, which fires after this component's first render) —
+// watching `.size` (not the Map reference itself, which never changes)
+// is what actually establishes a reactive dependency on additions/removals.
 watch(
-	() => extensions?.getInspectorTabs(),
-	(tabs) => {
+	() => extensions?.getInspectorTabs().size,
+	() => {
+		const tabs = extensions?.getInspectorTabs();
 		if (tabs) pluginTabNames.value = Array.from(tabs.keys());
 	},
 	{ immediate: true },
@@ -156,8 +162,44 @@ function isFieldVisible(node: KivNode, descriptor: FieldDescriptor): boolean {
 	return expected.includes(String(current ?? ""));
 }
 
+// ── Multi-select ────────────────────────────────────────────────────────────
+const isMulti = computed(() => (store?.selectedNodes.value.length ?? 0) > 1);
+
+/** The node whose values/fields drive the panel: the single selection, or — when
+ * every selected node shares a type — the first of the multi-selection. */
+const activeNode = computed<KivNode | null>(() => {
+	const nodes = store?.selectedNodes.value ?? [];
+	if (nodes.length === 0) return null;
+	const first = nodes[0];
+	if (!first) return null;
+	if (nodes.length === 1) return first;
+	return nodes.every((n) => n.type === first.type) ? first : null;
+});
+
+const targetIds = computed<string[]>(
+	() => store?.selectedNodes.value.map((n) => n.id) ?? [],
+);
+
+function applyPatch(patch: Record<string, unknown>) {
+	if (!store) return;
+	const ids = targetIds.value;
+	const first = ids[0];
+	if (!first) return;
+	if (ids.length > 1) store.updatePropsMany(ids, patch);
+	else store.updateProps(first, patch);
+}
+
+function toggleLockedAll() {
+	if (!store) return;
+	const nodes = store.selectedNodes.value;
+	const allLocked = nodes.every((n) => n.locked === true);
+	store.startBatch();
+	for (const n of nodes) store.setLocked(n.id, !allLocked);
+	store.endBatch();
+}
+
 const groupedFields = computed(() => {
-	const node = store?.selected.value;
+	const node = activeNode.value;
 	if (!node || !props.registry.has(node.type)) return [];
 
 	const compiled = props.registry.get(node.type);
@@ -189,7 +231,7 @@ const groupedFields = computed(() => {
 // Always extracts the per-breakpoint value even when in "base" mode,
 // because the stored value may already be a responsive object.
 function getFieldValue(fieldKey: string, descriptor: FieldDescriptor): unknown {
-	const node = store?.selected.value;
+	const node = activeNode.value;
 	if (!node) return undefined;
 	let raw = node.props[fieldKey];
 	// Localized field: unwrap the active locale (with fallback to first available)
@@ -220,7 +262,7 @@ function updateFieldValue(
 	descriptor: FieldDescriptor,
 	value: unknown,
 ) {
-	const node = store?.selected.value;
+	const node = activeNode.value;
 	if (!node || !store) return;
 
 	// Localized field: write into the active locale, preserving other locales.
@@ -233,31 +275,25 @@ function updateFieldValue(
 				? { ...existing.$t }
 				: {};
 			t[fieldLocale.value] = value;
-			store.updateProps(node.id, { [fieldKey]: { $t: t } });
+			applyPatch({ [fieldKey]: { $t: t } });
 			return;
 		}
 		// Single-locale doc — store as a plain value
-		store.updateProps(node.id, { [fieldKey]: value });
+		applyPatch({ [fieldKey]: value });
 		return;
 	}
 
 	if (!descriptor.responsive) {
-		store.updateProps(node.id, { [fieldKey]: value });
+		applyPatch({ [fieldKey]: value });
 		return;
 	}
 	// Always merge into responsive object to preserve other breakpoints
-	const existing = node.props[fieldKey];
-	const current: Record<string, unknown> =
-		existing && typeof existing === "object" && !Array.isArray(existing)
-			? { ...(existing as Record<string, unknown>) }
-			: {};
-	current[fieldBreakpoint.value] = value;
-	// A field with no "base" value has nothing to fall back to below the
-	// breakpoint being edited, so it silently reverts to the node's own
-	// hardcoded default there. Seed "base" with this same value so the field
-	// applies everywhere until the user explicitly overrides a smaller breakpoint.
-	if (current.base === undefined) current.base = value;
-	store.updateProps(node.id, { [fieldKey]: current });
+	const merged = mergeResponsiveValue(
+		node.props[fieldKey],
+		fieldBreakpoint.value,
+		value,
+	);
+	applyPatch({ [fieldKey]: merged });
 }
 
 const hasResponsiveFields = computed(() =>
@@ -269,19 +305,9 @@ const hasResponsiveFields = computed(() =>
 // ── Locked / visible toggles ────────────────────────────────────────────────
 const isNodeLocked = computed(() => store?.selected.value?.locked === true);
 
-const isNodeHiddenHere = computed(() => {
-	const node = store?.selected.value;
-	if (!node || node.visible === undefined) return false;
-	if (typeof node.visible === "boolean") return node.visible === false;
-	const ORDER = ["base", "sm", "md", "lg", "xl"] as const;
-	const obj = node.visible as unknown as Record<string, unknown>;
-	const target = ORDER.indexOf(fieldBreakpoint.value as (typeof ORDER)[number]);
-	for (let i = target; i >= 0; i--) {
-		const key = ORDER[i];
-		if (key && key in obj && obj[key] !== undefined) return obj[key] === false;
-	}
-	return false;
-});
+const isNodeHiddenHere = computed(() =>
+	isHiddenAtBreakpoint(store?.selected.value?.visible, fieldBreakpoint.value),
+);
 
 function toggleLocked() {
 	const node = store?.selected.value;
@@ -301,7 +327,7 @@ function toggleVisible() {
 		<div class="kiv-inspector__resize-handle" @mousedown="startResize" />
 		<div class="kiv-inspector__header">Inspector</div>
 
-		<div v-if="!store?.selected.value" class="kiv-inspector__empty">
+		<div v-if="!store?.selectedNodes.value.length" class="kiv-inspector__empty">
 			<div class="kiv-inspector__empty-icon">
 				<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 					<rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -311,7 +337,84 @@ function toggleVisible() {
 			<p>Select a node to inspect</p>
 		</div>
 
-		<template v-else>
+		<div v-else-if="isMulti" class="kiv-inspector__fields">
+			<div class="kiv-inspector__node-header">
+				<span class="kiv-inspector__node-badge">Multiple selected ({{ store?.selectedNodes.value.length }})</span>
+				<div class="kiv-inspector__node-actions">
+					<button
+						type="button"
+						class="kiv-inspector__action-btn"
+						title="Lock/unlock all selected"
+						@click="toggleLockedAll"
+					>
+						<svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+							<rect x="3" y="6" width="7" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.2"/>
+							<path d="M4.5 6V4.2a2 2 0 0 1 4 0V6" stroke="currentColor" stroke-width="1.2"/>
+						</svg>
+					</button>
+					<button
+						type="button"
+						class="kiv-inspector__action-btn kiv-inspector__action-btn--danger"
+						title="Delete all selected"
+						@click="store?.removeMany(targetIds)"
+					>
+						<svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+							<path d="M2 3.5h9M5 3.5V2.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1M10 3.5l-.7 7a1 1 0 0 1-1 .9H4.7a1 1 0 0 1-1-.9L3 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+							<path d="M5.5 6v3M7.5 6v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+						</svg>
+					</button>
+				</div>
+			</div>
+
+			<div v-if="!activeNode" class="kiv-inspector__empty">
+				<p>Select nodes of the same type to edit shared fields together.</p>
+			</div>
+			<template v-else>
+				<div v-if="hasResponsiveFields" class="kiv-inspector__responsive">
+					<span class="kiv-inspector__responsive-label">Breakpoint</span>
+					<div class="kiv-inspector__responsive-tabs">
+						<button
+							v-for="bp in BP_OPTIONS"
+							:key="bp.value"
+							type="button"
+							class="kiv-inspector__responsive-tab"
+							:class="{ active: fieldBreakpoint === bp.value }"
+							@click="store?.setBreakpoint(bp.value)"
+						>{{ bp.label }}</button>
+					</div>
+				</div>
+				<div class="kiv-inspector__groups">
+					<details
+						v-for="group in groupedFields"
+						:key="group.name"
+						class="kiv-inspector__group"
+						open
+					>
+						<summary class="kiv-inspector__group-title">
+							<svg class="kiv-inspector__chevron" width="10" height="10" viewBox="0 0 10 10" fill="none">
+								<path d="M3 2l4 3-4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+							</svg>
+							<span class="kiv-inspector__group-dot" :style="{ background: groupColor(group.name) }" />
+							{{ group.name }}
+						</summary>
+						<div class="kiv-inspector__group-fields">
+							<FieldControl
+								v-for="field in group.fields"
+								:key="`${field.key}-${fieldBreakpoint}-${fieldLocale}`"
+								:field-key="field.key"
+								:descriptor="field.descriptor"
+								:model-value="getFieldValue(field.key, field.descriptor)"
+								:breakpoint="field.descriptor.responsive ? fieldBreakpoint : undefined"
+								:locale="field.descriptor.localizable && localesCount > 1 ? fieldLocale : undefined"
+								@update:model-value="updateFieldValue(field.key, field.descriptor, $event)"
+							/>
+						</div>
+					</details>
+				</div>
+			</template>
+		</div>
+
+		<template v-else-if="store?.selected.value">
 			<!-- Node header: type badge + actions -->
 			<div class="kiv-inspector__node-header">
 				<span class="kiv-inspector__node-badge">{{ getNodeLabel(store.selected.value.type) }}</span>

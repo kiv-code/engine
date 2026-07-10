@@ -1,12 +1,20 @@
 <script setup lang="ts">
-import type { Breakpoint, EventBus, KivDocument } from "@kiv/engine";
+import type {
+	Breakpoint,
+	EventBus,
+	KivDocument,
+	MediaProvider,
+	ServicesContainer,
+} from "@kiv/engine";
 import { HOVER_EFFECTS_CSS } from "@kiv/nodes";
 import { computed, provide } from "vue";
 import { KIV_BUS_KEY } from "./bus";
 import { KIV_CONTEXT_KEY } from "./context";
 import { KIV_EDITOR_MODE_KEY } from "./editor-mode";
 import KivNodeRenderer from "./KivNodeRenderer.vue";
+import { KIV_MEDIA_KEY } from "./media";
 import type { VueRegistry } from "./registry";
+import { KIV_SERVICES_KEY } from "./services";
 
 const props = defineProps<{
 	document: KivDocument;
@@ -16,6 +24,10 @@ const props = defineProps<{
 	editorMode?: boolean;
 	/** Optional event bus (from engine.bus). When passed, interactive nodes emit events. */
 	bus?: EventBus;
+	/** Optional MediaProvider (from engine.media). When passed, ImageNode resolves responsive srcset. */
+	media?: MediaProvider | null;
+	/** Optional services container (from engine.services). When passed, FormNode submits via services.api. */
+	services?: ServicesContainer | null;
 }>();
 
 // Reactive provide — updates when breakpoint/locale props change
@@ -31,6 +43,8 @@ const ctx = computed(() => ({
 provide(KIV_CONTEXT_KEY, ctx);
 provide(KIV_EDITOR_MODE_KEY, props.editorMode ?? false);
 provide(KIV_BUS_KEY, props.bus ?? null);
+provide(KIV_MEDIA_KEY, props.media ?? null);
+provide(KIV_SERVICES_KEY, props.services ?? null);
 
 // Hover presets (.kiv-hover-*) need real CSS — `:hover` can't be inlined.
 // Inject it once per document so every KivRenderer instance works out of the

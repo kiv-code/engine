@@ -271,16 +271,18 @@ const visible = resolveResponsive(node.visible ?? true, ctx.breakpoint)
 
 ## Completion Checklist
 
-- [ ] `pnpm biome check --write .` passes
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm test` passes with new tests for clipboard, multi-select, undo grouping
-- [ ] Copy/paste works within and between documents
-- [ ] Multi-select works (Shift+click on canvas and tree)
-- [ ] Canvas DnD works (from palette + from tree)
-- [ ] Undo grouping batches rapid edits into single undo step
-- [ ] Keyboard shortcuts match the expansion table
-- [ ] Node locking works (lock icon, cannot edit/move/delete)
-- [ ] Per-breakpoint visibility hides nodes at specific breakpoints
-- [ ] Resize handles appear on Image and Section nodes
-- [ ] Canvas zoom/pan work (scroll zoom, space+drag pan)
-- [ ] Tree search filters nodes by label/type/ID
+- [x] `pnpm biome check --write .` passes
+- [x] `pnpm typecheck` passes
+- [x] `pnpm test` passes with new tests for clipboard, multi-select, undo grouping
+- [x] Copy/paste works within and between documents (primary selection only, see PROGRESS.md)
+- [x] Multi-select works (Shift+click on canvas and tree)
+- [x] Canvas DnD works (from palette + from tree)
+- [x] Undo grouping batches rapid edits into single undo step
+- [x] Keyboard shortcuts match the expansion table
+- [x] Node locking works (lock icon, cannot edit/move/delete — engine-level enforcement)
+- [x] Per-breakpoint visibility hides nodes at specific breakpoints
+- [x] Resize handles appear on Image and Section nodes
+- [x] Canvas zoom/pan work (scroll zoom, space+drag pan)
+- [x] Tree search filters nodes by label/type/ID
+
+Done — see `PROGRESS.md` → "Phases 2-5" for the verified summary.

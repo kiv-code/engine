@@ -162,11 +162,137 @@ describe("EditorEngine", () => {
 		expect(handler).toHaveBeenCalledWith({ id: "heading-1" });
 	});
 
+	it("batches rapid edits into a single undo step", () => {
+		const engine = new EditorEngine(makeDoc());
+		expect(engine.canUndo).toBe(false);
+		engine.startBatch();
+		engine.updateNodeProps("section-1", { background: "#111" });
+		engine.updateNodeProps("section-1", { background: "#222" });
+		engine.updateNodeProps("section-1", { background: "#333" });
+		expect(engine.document.root.slots?.default?.[0]?.props.background).toBe(
+			"#333",
+		);
+		// Live document updates immediately even though the batch is still open.
+		expect(engine.canUndo).toBe(false);
+		engine.endBatch();
+		expect(engine.canUndo).toBe(true);
+		engine.undo();
+		expect(engine.document.root.slots?.default?.[0]?.props.background).toBe(
+			"#fff",
+		);
+		expect(engine.canRedo).toBe(true);
+	});
+
+	it("supports nested startBatch/endBatch — only the outermost pair commits", () => {
+		const engine = new EditorEngine(makeDoc());
+		engine.startBatch();
+		engine.startBatch();
+		engine.updateNodeProps("section-1", { background: "#111" });
+		engine.endBatch();
+		expect(engine.canUndo).toBe(false);
+		engine.updateNodeProps("section-1", { background: "#222" });
+		engine.endBatch();
+		expect(engine.canUndo).toBe(true);
+		engine.undo();
+		expect(engine.document.root.slots?.default?.[0]?.props.background).toBe(
+			"#fff",
+		);
+	});
+
+	it("does not record an undo step for an empty batch", () => {
+		const engine = new EditorEngine(makeDoc());
+		engine.startBatch();
+		engine.endBatch();
+		expect(engine.canUndo).toBe(false);
+	});
+
+	it("isBatching reflects whether a batch is currently open", () => {
+		const engine = new EditorEngine(makeDoc());
+		expect(engine.isBatching).toBe(false);
+		engine.startBatch();
+		expect(engine.isBatching).toBe(true);
+		engine.endBatch();
+		expect(engine.isBatching).toBe(false);
+	});
+
+	it("updateNodeProps is a no-op when the target node is locked", () => {
+		const engine = new EditorEngine(makeDoc());
+		engine.setNodeFlags("section-1", { locked: true });
+		engine.updateNodeProps("section-1", { background: "#000" });
+		const section = engine.document.root.slots?.default?.[0];
+		expect(section?.props.background).toBe("#fff");
+	});
+
+	it("removeNode is a no-op when the target node is locked", () => {
+		const engine = new EditorEngine(makeDoc());
+		engine.setNodeFlags("heading-1", { locked: true });
+		engine.removeNode("heading-1");
+		const children = engine.document.root.slots?.default?.[0]?.slots?.default;
+		expect(children).toHaveLength(1);
+	});
+
+	it("moveNode is a no-op when the moved node is locked", () => {
+		const engine = new EditorEngine(makeDoc());
+		engine.setNodeFlags("heading-1", { locked: true });
+		engine.moveNode({
+			id: "heading-1",
+			targetParentId: "root",
+			targetSlot: "default",
+			targetIndex: 1,
+		});
+		expect(engine.document.root.slots?.default).toHaveLength(1);
+	});
+
 	it("selection changes emit selection.changed on the bus", () => {
 		const engine = new EditorEngine(makeDoc());
 		const handler = vi.fn();
 		engine.bus.on("selection.changed", handler);
 		engine.selection.select("heading-1");
 		expect(handler).toHaveBeenCalledWith({ ids: ["heading-1"] });
+	});
+
+	it("updateSeoMeta merges into document.seo and emits document.seoChanged", () => {
+		const engine = new EditorEngine(makeDoc());
+		const handler = vi.fn();
+		engine.bus.on("document.seoChanged", handler);
+		engine.updateSeoMeta({ title: "Home" });
+		engine.updateSeoMeta({ description: "Welcome" });
+		expect(engine.document.seo).toEqual({
+			title: "Home",
+			description: "Welcome",
+		});
+		expect(handler).toHaveBeenCalledTimes(2);
+	});
+
+	it("loadDocument replaces the whole document as a single undo step and clears selection", () => {
+		const engine = new EditorEngine(makeDoc());
+		engine.selection.select("heading-1");
+		const template: KivDocument = {
+			schemaVersion: 1,
+			root: { id: "root", type: "page", props: {} },
+			i18n: { default: "en", supported: ["en"] },
+		};
+		const handler = vi.fn();
+		engine.bus.on("document.loaded", handler);
+		engine.loadDocument(template);
+		expect(engine.document.root.slots).toBeUndefined();
+		expect(engine.selection.ids).toHaveLength(0);
+		expect(handler).toHaveBeenCalledTimes(1);
+		expect(engine.canUndo).toBe(true);
+		engine.undo();
+		expect(engine.document.root.id).toBe("root");
+		expect(engine.document.root.slots?.default).toHaveLength(1);
+	});
+
+	it("loadDocument clones its input so later mutations to the source object don't leak in", () => {
+		const engine = new EditorEngine(makeDoc());
+		const template: KivDocument = {
+			schemaVersion: 1,
+			root: { id: "root", type: "page", props: {} },
+			i18n: { default: "en", supported: ["en"] },
+		};
+		engine.loadDocument(template);
+		template.root.props.mutated = true;
+		expect(engine.document.root.props.mutated).toBeUndefined();
 	});
 });

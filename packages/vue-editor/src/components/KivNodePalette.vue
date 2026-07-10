@@ -3,137 +3,14 @@ import type { KivNode, Registry } from "@kiv/engine";
 import { computed, inject, nextTick, ref, watch } from "vue";
 import { EDITOR_EXTENSIONS_KEY } from "../store/context";
 import { getNodeLabel } from "../utils/node-labels";
+import {
+	CATEGORY_META,
+	createPaletteNode,
+	LEAF_TYPES,
+	PALETTE,
+	type PaletteItem,
+} from "../utils/palette-items";
 import NodeIcon from "./NodeIcon.vue";
-
-interface PaletteItem {
-	type: string;
-	label: string;
-	description: string;
-	hasDefaultSlot: boolean;
-	category: string;
-}
-
-const PALETTE: PaletteItem[] = [
-	{
-		type: "section",
-		label: "Section",
-		description: "Full-width section with rich background options",
-		hasDefaultSlot: true,
-		category: "layout",
-	},
-	{
-		type: "container",
-		label: "Container",
-		description: "Centered max-width content wrapper",
-		hasDefaultSlot: true,
-		category: "layout",
-	},
-	{
-		type: "stack",
-		label: "Group",
-		description: "Flex group — vertical column or horizontal row",
-		hasDefaultSlot: true,
-		category: "layout",
-	},
-	{
-		type: "grid",
-		label: "Grid",
-		description: "Responsive multi-column grid layout",
-		hasDefaultSlot: true,
-		category: "layout",
-	},
-	{
-		type: "column",
-		label: "Column",
-		description: "Column slot inside a Grid",
-		hasDefaultSlot: true,
-		category: "layout",
-	},
-	{
-		type: "heading",
-		label: "Heading",
-		description: "H1–H6 text with fluid sizing",
-		hasDefaultSlot: false,
-		category: "content",
-	},
-	{
-		type: "rich-text",
-		label: "Rich Text",
-		description: "HTML text block with inline formatting",
-		hasDefaultSlot: false,
-		category: "content",
-	},
-	{
-		type: "text",
-		label: "Text",
-		description: "Paragraph or inline text block",
-		hasDefaultSlot: false,
-		category: "content",
-	},
-	{
-		type: "button",
-		label: "Button",
-		description: "CTA with primary, secondary, ghost styles",
-		hasDefaultSlot: false,
-		category: "content",
-	},
-	{
-		type: "link",
-		label: "Link",
-		description: "Inline or button-style hyperlink",
-		hasDefaultSlot: false,
-		category: "content",
-	},
-	{
-		type: "divider",
-		label: "Divider",
-		description: "Horizontal rule with style, color, and spacing options",
-		hasDefaultSlot: false,
-		category: "content",
-	},
-	{
-		type: "image",
-		label: "Image",
-		description: "Responsive image with cover/contain fit",
-		hasDefaultSlot: false,
-		category: "media",
-	},
-	{
-		type: "video",
-		label: "Video",
-		description: "YouTube, Vimeo, or custom video embed",
-		hasDefaultSlot: false,
-		category: "media",
-	},
-	{
-		type: "icon",
-		label: "Icon",
-		description: "CSS class or inline SVG icon",
-		hasDefaultSlot: false,
-		category: "media",
-	},
-];
-
-const CATEGORY_META: Record<string, { label: string; color: string }> = {
-	layout: { label: "Layout", color: "#818cf8" },
-	content: { label: "Content", color: "#34d399" },
-	media: { label: "Media", color: "#fb923c" },
-	interactive: { label: "Interactive", color: "#f472b6" },
-	embed: { label: "Embed", color: "#a78bfa" },
-};
-
-// Leaf node types — cannot contain children
-const LEAF_TYPES = new Set([
-	"heading",
-	"rich-text",
-	"text",
-	"button",
-	"link",
-	"image",
-	"video",
-	"icon",
-	"divider",
-]);
 
 const props = defineProps<{
 	open: boolean;
@@ -236,14 +113,24 @@ function isActive(item: PaletteItem) {
 }
 
 function addNode(item: PaletteItem) {
-	const defaults = props.registry?.get(item.type)?.defaults ?? {};
-	const node: KivNode = {
-		id: `${item.type}-${Math.random().toString(36).slice(2, 7)}`,
-		type: item.type,
-		props: { ...defaults },
-		slots: item.hasDefaultSlot ? { default: [] } : undefined,
-	};
+	const node = createPaletteNode(
+		item.type,
+		props.registry,
+		item.hasDefaultSlot,
+	);
 	emit("add", node);
+}
+
+// Dragging a card starts a native drag session that keeps running after the
+// DOM it started from goes away, so the modal (which would otherwise cover
+// the canvas underneath) closes immediately — the canvas becomes the drop
+// target for the rest of the gesture, like a picker that dismisses on drag.
+function onCardDragStart(e: DragEvent, item: PaletteItem) {
+	if (!e.dataTransfer) return;
+	e.dataTransfer.setData("application/x-kiv-node-type", item.type);
+	e.dataTransfer.setData("text/plain", item.type);
+	e.dataTransfer.effectAllowed = "copy";
+	emit("close");
 }
 
 function onBackdrop(e: MouseEvent) {
@@ -345,9 +232,11 @@ function onKeydown(e: KeyboardEvent) {
 										v-for="item in categoryItems(cat)"
 										:key="item.type"
 										type="button"
+										draggable="true"
 										class="kiv-palette-modal__card"
 										:class="{ 'kiv-palette-modal__card--active': isActive(item) }"
 										@click="addNode(item)"
+										@dragstart="onCardDragStart($event, item)"
 										@mouseenter="activeIndex = flatItems.findIndex((f) => f.type === item.type)"
 									>
 										<span

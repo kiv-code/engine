@@ -23,6 +23,7 @@
 		"vue": "^3.5.17"
 	},
 	"devDependencies": {
+		"@kiv/nodes-interactive": "workspace:*",
 		"@vitejs/plugin-vue": "^5.2.4",
 		"@vue/test-utils": "^2.4.11",
 		"happy-dom": "^20.10.6",

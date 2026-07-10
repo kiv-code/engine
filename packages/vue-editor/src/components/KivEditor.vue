@@ -5,20 +5,25 @@ import type {
 	KivDocument,
 	KivEngine,
 	KivNode,
+	PageTemplate,
 	Registry,
 } from "@kiv/engine";
+import { BUILT_IN_TEMPLATES } from "@kiv/engine";
 import type { VueRegistry } from "@kiv/vue";
 import { computed, onMounted, onUnmounted, provide, ref, watch } from "vue";
 import { EditorExtensions } from "../extensions";
 import ColorGradientControl from "../inspector/controls/ColorGradientControl.vue";
 import IconPicker from "../inspector/controls/IconPicker.vue";
+import MediaPicker from "../inspector/controls/MediaPicker.vue";
 import SizeSliderControl from "../inspector/controls/SizeSliderControl.vue";
 import { EDITOR_EXTENSIONS_KEY, EDITOR_STORE_KEY } from "../store/context";
 import { useEditorStore } from "../store/editor-store";
+import { insertNodeNearSelection } from "../utils/insert-node";
 import { getNodeLabel } from "../utils/node-labels";
 import KivCanvas from "./KivCanvas.vue";
 import KivInspector from "./KivInspector.vue";
 import KivNodePalette from "./KivNodePalette.vue";
+import KivTemplateBrowser from "./KivTemplateBrowser.vue";
 import KivTree from "./KivTree.vue";
 
 const props = defineProps<{
@@ -37,6 +42,8 @@ const emit = defineEmits<{ "update:document": [doc: KivDocument] }>();
 
 const store = useEditorStore(props.document, props.registry, {
 	bus: props.bus,
+	media: props.engine?.media ?? null,
+	services: props.engine?.services ?? null,
 });
 provide(EDITOR_STORE_KEY, store);
 
@@ -44,6 +51,7 @@ const extensions = new EditorExtensions();
 extensions.addFieldControl("icon-picker", IconPicker);
 extensions.addFieldControl("color-gradient", ColorGradientControl);
 extensions.addFieldControl("size-slider", SizeSliderControl);
+extensions.addFieldControl("media-picker", MediaPicker);
 provide(EDITOR_EXTENSIONS_KEY, extensions);
 
 watch(
@@ -105,6 +113,11 @@ onMounted(() => {
 const treeOpen = ref(true);
 const inspectorOpen = ref(true);
 const paletteOpen = ref(false);
+const templatesOpen = ref(false);
+
+function applyTemplate(template: PageTemplate): void {
+	store.loadDocument(template.document);
+}
 
 // Editor chrome theme — initialized from prop, toggleable at runtime
 const editorTheme = ref<"dark" | "light">(props.theme ?? "dark");
@@ -128,53 +141,12 @@ function closePalette() {
 	paletteOpen.value = false;
 }
 
-function findParentLoc(
-	current: KivNode,
-	targetId: string,
-): { parent: KivNode; slot: string; index: number } | null {
-	for (const [slot, children] of Object.entries(current.slots ?? {})) {
-		for (let i = 0; i < children.length; i++) {
-			const child = children[i];
-			if (!child) continue;
-			if (child.id === targetId) return { parent: current, slot, index: i };
-			const found = findParentLoc(child, targetId);
-			if (found) return found;
-		}
-	}
-	return null;
-}
-
 // Smart insert: if selected has slots → append inside as last child.
 // If selected is a leaf (no slots) → insert after it in its parent.
 // No selection → append to root's first slot.
 function onPaletteAdd(node: KivNode) {
 	if (!store) return;
-	const selected = store.selected.value;
-	const doc = store.document.value;
-
-	if (selected) {
-		const slots = Object.keys(selected.slots ?? {});
-		if (slots.length > 0) {
-			// Has slots — append as last child
-			const slotName = slots[0] ?? "default";
-			const children = selected.slots?.[slotName] ?? [];
-			store.addNode(selected.id, slotName, node, children.length);
-		} else {
-			// Leaf — insert after in parent
-			const loc = findParentLoc(doc.root, selected.id);
-			if (loc) {
-				store.addNode(loc.parent.id, loc.slot, node, loc.index + 1);
-			} else {
-				const slotName = Object.keys(doc.root.slots ?? {})[0] ?? "default";
-				store.addNode(doc.root.id, slotName, node);
-			}
-		}
-	} else {
-		const slotName = Object.keys(doc.root.slots ?? {})[0] ?? "default";
-		const children = doc.root.slots?.[slotName] ?? [];
-		store.addNode(doc.root.id, slotName, node, children.length);
-	}
-
+	insertNodeNearSelection(store, node);
 	store.select(node.id);
 	paletteOpen.value = false;
 }
@@ -289,6 +261,13 @@ const BREAKPOINTS: BpDef[] = [
 			<div class="kiv-toolbar__right">
 				<button
 					type="button"
+					class="kiv-toolbar__zoom-btn"
+					title="Reset zoom (⌘0)"
+					@click="store.resetZoom()"
+				>{{ Math.round(store.zoom.value * 100) }}%</button>
+				<div class="kiv-toolbar__sep" />
+				<button
+					type="button"
 					class="kiv-toolbar__add-btn"
 					title="Add node"
 					@click="openPalette"
@@ -297,6 +276,20 @@ const BREAKPOINTS: BpDef[] = [
 						<path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
 					</svg>
 					Add
+				</button>
+				<div class="kiv-toolbar__sep" />
+				<button
+					type="button"
+					class="kiv-toolbar__action"
+					title="Page templates"
+					@click="templatesOpen = true"
+				>
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<rect x="3" y="3" width="7" height="7" rx="1"/>
+						<rect x="14" y="3" width="7" height="7" rx="1"/>
+						<rect x="3" y="14" width="7" height="7" rx="1"/>
+						<rect x="14" y="14" width="7" height="7" rx="1"/>
+					</svg>
 				</button>
 				<div class="kiv-toolbar__sep" />
 				<button
@@ -335,7 +328,7 @@ const BREAKPOINTS: BpDef[] = [
 			<transition name="kiv-panel">
 				<KivTree v-if="treeOpen" @open-palette="openPalette" />
 			</transition>
-			<KivCanvas :registry="vueRegistry" />
+			<KivCanvas :registry="vueRegistry" :engine-registry="registry" />
 			<transition name="kiv-panel">
 				<KivInspector v-if="inspectorOpen" :registry="registry" />
 			</transition>
@@ -349,6 +342,13 @@ const BREAKPOINTS: BpDef[] = [
 			:theme="editorTheme"
 			@close="closePalette"
 			@add="onPaletteAdd"
+		/>
+
+		<KivTemplateBrowser
+			:open="templatesOpen"
+			:templates="BUILT_IN_TEMPLATES"
+			@close="templatesOpen = false"
+			@apply="applyTemplate"
 		/>
 	</div>
 </template>
@@ -456,6 +456,23 @@ const BREAKPOINTS: BpDef[] = [
 	transition: opacity 0.12s;
 }
 .kiv-toolbar__add-btn:hover { opacity: 0.85; }
+.kiv-toolbar__zoom-btn {
+	padding: 4px 8px;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--color-text-secondary);
+	font-size: 0.72rem;
+	font-weight: 600;
+	font-family: inherit;
+	font-variant-numeric: tabular-nums;
+	cursor: pointer;
+	transition: background 0.12s, color 0.12s;
+}
+.kiv-toolbar__zoom-btn:hover {
+	background: var(--color-surface-overlay);
+	color: var(--color-text-primary);
+}
 
 /* ── Breakpoint switcher ── */
 .kiv-bp-switcher {

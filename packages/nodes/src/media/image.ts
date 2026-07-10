@@ -35,7 +35,11 @@ export const imageNode = defineNode({
 		return `<img src="${src}" alt="${alt}"${classAttr} style="${style}" data-kiv-type="image" />`;
 	},
 	fields: {
-		src: f.text({ label: "Source URL", group: "Content" }),
+		src: f.text({
+			label: "Source URL",
+			group: "Content",
+			pluginControl: "media-picker",
+		}),
 		alt: f.text({ label: "Alt text", localizable: true, group: "Content" }),
 		fit: f.select(["cover", "contain", "fill", "none"], {
 			label: "Object fit",

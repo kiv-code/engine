@@ -12,3 +12,8 @@ export const EDITOR_EXTENSIONS_KEY: InjectionKey<EditorExtensions> = Symbol(
 /** The Structure panel's filter text, provided once at KivTree and read by every recursive KivTreeNode. */
 export const KIV_TREE_FILTER_KEY: InjectionKey<Ref<string>> =
 	Symbol("kiv-tree-filter");
+
+/** Provided by KivTree so KivCanvas can focus the tree's search input on ⌘F. */
+export const KIV_TREE_FOCUS_SEARCH_KEY: InjectionKey<() => void> = Symbol(
+	"kiv-tree-focus-search",
+);

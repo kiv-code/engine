@@ -20,6 +20,7 @@ export const SPACING: Record<string, string> = {
 	lg: "32px",
 	xl: "64px",
 	"2xl": "128px",
+	"3xl": "192px",
 };
 
 /**
@@ -83,6 +84,15 @@ export const BLUR: Record<string, string> = {
 	lg: "16px",
 };
 
+/**
+ * Candidate pixel widths for Image's responsive `srcset`. Shared so every
+ * renderer generates the SAME breakpoint set from a MediaProvider — matches
+ * the resolver's mobile-first breakpoints (sm/md/lg/xl) plus a small base.
+ */
+export const IMAGE_SRCSET_WIDTHS: readonly number[] = [
+	400, 640, 768, 1024, 1280, 1600,
+];
+
 /** Container max-width scale. */
 export const MAX_WIDTH: Record<string, string> = {
 	xs: "480px",
@@ -111,6 +121,14 @@ export const LETTER_SPACING: Record<string, string> = {
 	wide: "0.025em",
 	wider: "0.05em",
 	widest: "0.1em",
+};
+
+/** Stat counter font sizes. */
+export const STAT_SIZE: Record<string, string> = {
+	md: "32px",
+	lg: "40px",
+	xl: "56px",
+	"2xl": "72px",
 };
 
 /** Default font-size (px) per heading level. */

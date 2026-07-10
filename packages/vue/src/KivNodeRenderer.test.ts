@@ -80,6 +80,28 @@ describe("KivNodeRenderer", () => {
 		expect(heading.text()).toBe("Nested");
 	});
 
+	it("falls back to Link's flat text prop when its default slot is an empty array (not undefined)", () => {
+		// This is the shape a freshly palette-created Link node has: it gets
+		// `slots: { default: [] }` up front (so DnD/indent can nest into it
+		// later) but starts with no children, so the flat `text` prop must
+		// still render — an empty-but-present slot must NOT suppress it.
+		const node: KivNode = {
+			id: "link-1",
+			type: "link",
+			props: { text: "Fallback text", href: "#" },
+			slots: { default: [] },
+		};
+
+		const wrapper = mount(KivNodeRenderer, {
+			props: { node },
+			global: {
+				provide: { [KIV_CONTEXT_KEY as unknown as string]: baseContext() },
+			},
+		});
+
+		expect(wrapper.text()).toBe("Fallback text");
+	});
+
 	it("renders an unknown-type fallback div when the registry has no component for the type", () => {
 		const node: KivNode = {
 			id: "mystery-1",

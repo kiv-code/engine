@@ -3,26 +3,44 @@ import { describe, expect, it } from "vitest";
 import {
 	ALL_NODES,
 	buttonNode,
+	cardNode,
 	columnNode,
+	computeCountdownParts,
 	containerNode,
+	countdownNode,
 	DEFAULT_COLOR_OR_GRADIENT,
+	embedNode,
+	formatStatValue,
+	formFieldNode,
+	formNode,
 	gridNode,
 	headingNode,
 	imageNode,
 	pageNode,
+	parseSelectOptions,
+	parseSocialLinks,
+	parseTableData,
+	renderStars,
 	sectionNode,
+	socialIconsNode,
+	spacerNode,
 	stackNode,
+	statNode,
+	tableNode,
+	testimonialNode,
 	textNode,
 } from "./index";
 
+const ctx = { locale: "en", breakpoint: "base" as const };
+
 describe("ALL_NODES", () => {
-	it("contains 15 nodes", () => {
-		expect(ALL_NODES).toHaveLength(15);
+	it("contains 25 nodes", () => {
+		expect(ALL_NODES).toHaveLength(25);
 	});
 
 	it("all nodes have unique types", () => {
 		const types = ALL_NODES.map((n) => n.type);
-		expect(new Set(types).size).toBe(15);
+		expect(new Set(types).size).toBe(25);
 	});
 
 	it("registers without errors into a Registry", () => {
@@ -144,8 +162,6 @@ describe("node schemas", () => {
 });
 
 describe("toHtml", () => {
-	const ctx = { locale: "en", breakpoint: "base" as const };
-
 	it("every node renders non-empty HTML from its own defaults", () => {
 		for (const node of ALL_NODES) {
 			const html = node.toHtml?.(node.defaults, {}, ctx);
@@ -241,5 +257,253 @@ describe("toHtml", () => {
 			ctx,
 		);
 		expect(html).toContain('class="kiv-hover-grayscale"');
+	});
+});
+
+describe("form + form-field", () => {
+	it("form renders an action/method and the submit label", () => {
+		const html = formNode.toHtml?.(
+			{ submitUrl: "/api/contact", method: "post", submitLabel: "Send" },
+			{ default: '<div data-kiv-type="form-field"></div>' },
+			ctx,
+		);
+		expect(html).toContain('action="/api/contact"');
+		expect(html).toContain('method="post"');
+		expect(html).toContain("Send");
+		expect(html).toContain('data-kiv-type="form-field"');
+	});
+
+	it("form-field renders a labeled text input by default", () => {
+		const html = formFieldNode.toHtml?.(
+			{ fieldType: "text", name: "email", label: "Email", required: true },
+			{},
+			ctx,
+		);
+		expect(html).toContain('type="text"');
+		expect(html).toContain('name="email"');
+		expect(html).toContain("required");
+		expect(html).toContain("Email");
+	});
+
+	it("form-field renders select options from the comma-separated field", () => {
+		const html = formFieldNode.toHtml?.(
+			{ fieldType: "select", name: "plan", options: "Basic, Pro, Enterprise" },
+			{},
+			ctx,
+		);
+		expect(html).toContain("<select");
+		expect(html).toContain(">Basic<");
+		expect(html).toContain(">Pro<");
+		expect(html).toContain(">Enterprise<");
+	});
+
+	it("parseSelectOptions trims and drops empty entries", () => {
+		expect(parseSelectOptions("a, , b ,")).toEqual(["a", "b"]);
+		expect(parseSelectOptions(undefined)).toEqual([]);
+	});
+});
+
+describe("testimonial", () => {
+	it("renders quote, author, and rating stars", () => {
+		const html = testimonialNode.toHtml?.(
+			{
+				quote: "Great product",
+				authorName: "Jane Doe",
+				authorRole: "CEO",
+				rating: 4,
+			},
+			{},
+			ctx,
+		);
+		expect(html).toContain("Great product");
+		expect(html).toContain("Jane Doe");
+		expect(html).toContain("CEO");
+		expect(html).toContain('data-kiv-type="testimonial"');
+	});
+
+	it("omits the rating stars when rating is 0", () => {
+		const html = testimonialNode.toHtml?.(
+			{ quote: "Hi", rating: 0, quoteMarkStyle: "none" },
+			{},
+			ctx,
+		);
+		expect(html).not.toContain("<svg");
+	});
+
+	it("renderStars clamps to 0-5", () => {
+		expect(renderStars(-1)).not.toContain("undefined");
+		expect(renderStars(10)).toBeTruthy();
+	});
+});
+
+describe("card", () => {
+	it("wraps slot children in a styled container", () => {
+		const html = cardNode.toHtml?.({}, { default: "<p>Body</p>" }, ctx);
+		expect(html).toContain("<p>Body</p>");
+		expect(html).toContain('data-kiv-type="card"');
+	});
+
+	it("adds an outline when highlighted", () => {
+		const html = cardNode.toHtml?.({ highlighted: true }, {}, ctx);
+		expect(html).toContain("outline");
+	});
+});
+
+describe("countdown", () => {
+	it("computeCountdownParts marks the past as expired", () => {
+		const parts = computeCountdownParts("2000-01-01T00:00:00Z");
+		expect(parts.expired).toBe(true);
+	});
+
+	it("computeCountdownParts computes remaining units for a future date", () => {
+		const future = new Date(Date.now() + 90_000).toISOString();
+		const parts = computeCountdownParts(future);
+		expect(parts.expired).toBe(false);
+		expect(parts.minutes).toBeGreaterThanOrEqual(1);
+	});
+
+	it("toHtml renders the expired message once the target has passed", () => {
+		const html = countdownNode.toHtml?.(
+			{ targetDate: "2000-01-01T00:00:00Z", expiredMessage: "Done!" },
+			{},
+			ctx,
+		);
+		expect(html).toContain("Done!");
+	});
+
+	it("toHtml renders a static day/hour/min/sec snapshot for a future date", () => {
+		const future = new Date(Date.now() + 2 * 86400_000).toISOString();
+		const html = countdownNode.toHtml?.({ targetDate: future }, {}, ctx);
+		expect(html).toContain("<time");
+		expect(html).toContain(future);
+	});
+});
+
+describe("stat", () => {
+	it("formatStatValue applies prefix/suffix/decimals", () => {
+		expect(formatStatValue(99.5, 1, "$", "k")).toBe("$99.5k");
+		expect(formatStatValue(100, 0, "", "%")).toBe("100%");
+	});
+
+	it("toHtml renders the final formatted value and label", () => {
+		const html = statNode.toHtml?.(
+			{ value: 250, suffix: "+", label: "Customers" },
+			{},
+			ctx,
+		);
+		expect(html).toContain("250+");
+		expect(html).toContain("Customers");
+	});
+});
+
+describe("social-icons", () => {
+	it("parseSocialLinks returns [] for invalid JSON without throwing", () => {
+		expect(() => parseSocialLinks("not json")).not.toThrow();
+		expect(parseSocialLinks("not json")).toEqual([]);
+		expect(parseSocialLinks("")).toEqual([]);
+		expect(parseSocialLinks('{"not":"an array"}')).toEqual([]);
+	});
+
+	it("renders a link per known platform", () => {
+		const html = socialIconsNode.toHtml?.(
+			{
+				links: JSON.stringify([
+					{ platform: "twitter", url: "https://x.com/kiv" },
+					{ platform: "github", url: "https://github.com/kiv" },
+				]),
+			},
+			{},
+			ctx,
+		);
+		expect(html).toContain("https://x.com/kiv");
+		expect(html).toContain("https://github.com/kiv");
+	});
+
+	it("renders an empty container (never throws) for an empty links array", () => {
+		const html = socialIconsNode.toHtml?.({ links: "[]" }, {}, ctx);
+		expect(html).toContain('data-kiv-type="social-icons"');
+	});
+});
+
+describe("spacer", () => {
+	it("renders an empty height-only block from the scale", () => {
+		const html = spacerNode.toHtml?.({ height: "lg" }, {}, ctx);
+		expect(html).toContain("height: 32px");
+		expect(html).toContain('data-kiv-type="spacer"');
+	});
+});
+
+describe("embed", () => {
+	it("html mode renders a sandboxed srcdoc iframe without allow-same-origin", () => {
+		const html = embedNode.toHtml?.(
+			{ embedType: "html", html: "<b>hi</b>", sandboxed: true },
+			{},
+			ctx,
+		);
+		expect(html).toContain("<iframe");
+		expect(html).toContain("srcdoc=");
+		expect(html).toContain('sandbox="allow-scripts"');
+		expect(html).not.toContain("allow-same-origin");
+	});
+
+	it("iframe mode renders a sandboxed src iframe", () => {
+		const html = embedNode.toHtml?.(
+			{
+				embedType: "iframe",
+				iframeUrl: "https://example.com",
+				sandboxed: true,
+			},
+			{},
+			ctx,
+		);
+		expect(html).toContain('src="https://example.com"');
+		expect(html).toContain("allow-same-origin");
+	});
+
+	it("omits the sandbox attribute entirely when sandboxed is false", () => {
+		const html = embedNode.toHtml?.(
+			{
+				embedType: "iframe",
+				iframeUrl: "https://example.com",
+				sandboxed: false,
+			},
+			{},
+			ctx,
+		);
+		expect(html).not.toContain("sandbox=");
+	});
+
+	it("never renders raw HTML outside an iframe", () => {
+		const html = embedNode.toHtml?.(
+			{ embedType: "html", html: "<script>alert(1)</script>" },
+			{},
+			ctx,
+		);
+		expect(html).not.toContain("<script>alert(1)</script>");
+	});
+});
+
+describe("table", () => {
+	it("parseTableData returns empty arrays for malformed JSON without throwing", () => {
+		expect(() => parseTableData("{not valid")).not.toThrow();
+		expect(parseTableData("{not valid")).toEqual({ headers: [], rows: [] });
+	});
+
+	it("renders a real semantic table with headers and rows", () => {
+		const html = tableNode.toHtml?.(
+			{
+				data: JSON.stringify({
+					headers: ["Name", "Role"],
+					rows: [["Ada", "Engineer"]],
+				}),
+			},
+			{},
+			ctx,
+		);
+		expect(html).toContain("<table");
+		expect(html).toContain("<thead>");
+		expect(html).toContain("<tbody>");
+		expect(html).toContain("Name");
+		expect(html).toContain("Ada");
 	});
 });

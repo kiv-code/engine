@@ -1,5 +1,10 @@
 export const version = "0.0.0";
 export {
+	cloneNodeTree,
+	deserializeNode,
+	serializeNode,
+} from "./clipboard";
+export {
 	type AddNodeInput,
 	addNode,
 	cloneDocument,
@@ -21,6 +26,7 @@ export {
 	SelectionState,
 	setNodeFlags,
 	updateNodeProps,
+	updateSeoMeta,
 } from "./editor";
 export {
 	type CreateEngineOptions,
@@ -42,6 +48,7 @@ export {
 export type {
 	ImageTransform,
 	MediaAsset,
+	MediaListQuery,
 	MediaProvider,
 	UploadOptions,
 } from "./media";
@@ -92,6 +99,7 @@ export type {
 	ServicesContainer,
 	StorageProvider,
 } from "./services";
+export { BUILT_IN_TEMPLATES, type PageTemplate } from "./templates";
 export {
 	defaultTheme,
 	resolveTheme,
@@ -110,4 +118,5 @@ export type {
 	LocalizedObject,
 	Responsive,
 	ResponsiveObject,
+	SeoMeta,
 } from "./types";

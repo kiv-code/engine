@@ -1,6 +1,6 @@
 import type { EventBus } from "../events";
 import { createEventBus } from "../events";
-import type { KivDocument, KivNode } from "../types";
+import type { KivDocument, KivNode, SeoMeta } from "../types";
 import {
 	addNode as addNodeOp,
 	cloneDocument,
@@ -13,6 +13,7 @@ import {
 	renameNode as renameNodeOp,
 	setNodeFlags as setNodeFlagsOp,
 	updateNodeProps as updateNodePropsOp,
+	updateSeoMeta as updateSeoMetaOp,
 } from "./document-ops";
 import { HistoryManager } from "./history";
 import { SelectionState } from "./selection";
@@ -31,6 +32,9 @@ export class EditorEngine implements DocumentMutations {
 	readonly selection = new SelectionState();
 	readonly bus: EventBus;
 	private readonly history: HistoryManager<KivDocument>;
+	private batchDepth = 0;
+	private pendingBatchSnapshot: KivDocument | null = null;
+	private batchDirty = false;
 
 	constructor(document: KivDocument, options: EditorEngineOptions = {}) {
 		this.bus = options.bus ?? createEventBus();
@@ -141,6 +145,60 @@ export class EditorEngine implements DocumentMutations {
 		this.bus.emit("node.flagsChanged", { id });
 	}
 
+	/** Merges a patch into the document's page-level SEO metadata (title, description, OG, …). */
+	updateSeoMeta(patch: Partial<SeoMeta>): void {
+		this.commit(updateSeoMetaOp(this.document, patch), {
+			type: "document.seoChanged",
+		});
+		this.bus.emit("document.seoChanged", { patch });
+	}
+
+	/**
+	 * Replaces the entire document (e.g. applying a page template) as a single
+	 * undo step. Clears the selection, since node ids from the previous
+	 * document are no longer guaranteed to exist.
+	 */
+	loadDocument(document: KivDocument): void {
+		this.commit(cloneDocument(document), { type: "document.loaded" });
+		this.selection.clear();
+		this.bus.emit("document.loaded", { document: this.document });
+	}
+
+	/** True while a batch opened with `startBatch()` hasn't been closed yet. */
+	get isBatching(): boolean {
+		return this.batchDepth > 0;
+	}
+
+	/**
+	 * Opens (or nests into) a batch: mutations committed until the matching
+	 * `endBatch()` update the live document immediately but collapse into a
+	 * single undo step instead of one step per mutation. Safe to nest — only
+	 * the outermost `startBatch`/`endBatch` pair records the undo step.
+	 */
+	startBatch(): void {
+		if (this.batchDepth === 0) {
+			this.pendingBatchSnapshot = cloneDocument(this.document);
+			this.batchDirty = false;
+		}
+		this.batchDepth++;
+	}
+
+	/** Closes a batch opened with `startBatch()`. No-op if none is open. */
+	endBatch(): void {
+		if (this.batchDepth === 0) return;
+		this.batchDepth--;
+		if (this.batchDepth === 0) {
+			if (this.batchDirty && this.pendingBatchSnapshot) {
+				this.history.commitBatch(this.pendingBatchSnapshot, {
+					type: "batch",
+				});
+				this.emitHistoryChanged();
+			}
+			this.pendingBatchSnapshot = null;
+			this.batchDirty = false;
+		}
+	}
+
 	undo(): void {
 		if (this.history.undo() === null) return;
 		this.emitHistoryChanged();
@@ -155,7 +213,12 @@ export class EditorEngine implements DocumentMutations {
 		next: KivDocument,
 		meta: { type: string; [key: string]: unknown },
 	): void {
-		this.history.push(next, meta);
+		if (this.batchDepth > 0) {
+			this.batchDirty = true;
+			this.history.replacePresent(next, meta);
+		} else {
+			this.history.push(next, meta);
+		}
 		this.emitHistoryChanged();
 	}
 

@@ -1,4 +1,4 @@
-import type { KivDocument, KivNode } from "../types";
+import type { KivDocument, KivNode, SeoMeta } from "../types";
 
 /** A node found within a document, together with its parent context. */
 export interface NodeLocation {
@@ -69,6 +69,7 @@ export function updateNodeProps(
 	const next = cloneDocument(doc);
 	const loc = findNode(next, id);
 	if (!loc) return next;
+	if (loc.node.locked) return doc;
 	loc.node.props = { ...loc.node.props, ...patch };
 	return next;
 }
@@ -84,6 +85,14 @@ export function setNodeFlags(
 	if (!loc) return next;
 	Object.assign(loc.node, patch);
 	return next;
+}
+
+/** Merges a patch into the document's page-level SEO metadata. Returns a new document. */
+export function updateSeoMeta(
+	doc: KivDocument,
+	patch: Partial<SeoMeta>,
+): KivDocument {
+	return { ...doc, seo: { ...doc.seo, ...patch } };
 }
 
 /** Adds a node to a slot of a parent. Returns a new document. */
@@ -112,6 +121,7 @@ export function removeNode(doc: KivDocument, id: string): KivDocument {
 	const next = cloneDocument(doc);
 	const loc = findNode(next, id);
 	if (!loc?.parent || loc.slotName === null) return next;
+	if (loc.node.locked) return doc;
 	const slot = loc.parent.slots?.[loc.slotName];
 	if (!slot) return next;
 	slot.splice(loc.index, 1);
@@ -150,6 +160,7 @@ export function moveNode(
 ): KivDocument {
 	const loc = findNode(doc, id);
 	if (!loc) return doc;
+	if (loc.node.locked) return doc;
 	const nodeCopy = JSON.parse(JSON.stringify(loc.node)) as KivNode;
 	const afterRemove = removeNode(doc, id);
 	return addNode(

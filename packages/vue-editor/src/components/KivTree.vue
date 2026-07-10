@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import type { KivNode } from "@kiv/engine";
-import { computed, inject, provide, ref } from "vue";
+import { computed, inject, nextTick, provide, ref, watch } from "vue";
 import { useResizablePanel } from "../composables/useResizablePanel";
-import { EDITOR_STORE_KEY, KIV_TREE_FILTER_KEY } from "../store/context";
+import {
+	EDITOR_STORE_KEY,
+	KIV_TREE_FILTER_KEY,
+	KIV_TREE_FOCUS_SEARCH_KEY,
+} from "../store/context";
+import { getNodeLabel } from "../utils/node-labels";
 import KivTreeNode from "./KivTreeNode.vue";
 
 const store = inject(EDITOR_STORE_KEY);
@@ -11,6 +16,10 @@ const emit = defineEmits<{ openPalette: [] }>();
 const filterQuery = ref("");
 provide(KIV_TREE_FILTER_KEY, filterQuery);
 
+const filterInputRef = ref<HTMLInputElement | null>(null);
+const bodyRef = ref<HTMLElement | null>(null);
+provide(KIV_TREE_FOCUS_SEARCH_KEY, () => filterInputRef.value?.focus());
+
 function countNodes(node: KivNode): number {
 	const children = Object.values(node.slots ?? {}).flat();
 	return 1 + children.reduce((sum, c) => sum + countNodes(c), 0);
@@ -18,6 +27,35 @@ function countNodes(node: KivNode): number {
 const nodeCount = computed(() =>
 	store ? countNodes(store.document.value.root) : 0,
 );
+
+function countMatches(node: KivNode, q: string): number {
+	let count =
+		node.id.toLowerCase().includes(q) ||
+		getNodeLabel(node.type).toLowerCase().includes(q)
+			? 1
+			: 0;
+	for (const children of Object.values(node.slots ?? {})) {
+		for (const child of children) count += countMatches(child, q);
+	}
+	return count;
+}
+const matchCount = computed<number | null>(() => {
+	const q = filterQuery.value.trim().toLowerCase();
+	if (!q || !store) return null;
+	return countMatches(store.document.value.root, q);
+});
+
+function clearFilter() {
+	filterQuery.value = "";
+}
+
+watch(filterQuery, async (q) => {
+	if (!q.trim()) return;
+	await nextTick();
+	bodyRef.value
+		?.querySelector('[data-kiv-tree-match="true"]')
+		?.scrollIntoView({ block: "nearest" });
+});
 
 const { width, startResize } = useResizablePanel({
 	storageKey: "kiv-editor:tree-width",
@@ -35,16 +73,23 @@ const { width, startResize } = useResizablePanel({
 				<span>Structure</span>
 				<span class="kiv-tree__count">{{ nodeCount }}</span>
 			</div>
-			<input
-				v-model="filterQuery"
-				type="text"
-				class="kiv-tree__filter"
-				placeholder="Filter nodes..."
-				spellcheck="false"
-				autocomplete="off"
-			/>
+			<div class="kiv-tree__filter-row">
+				<input
+					ref="filterInputRef"
+					v-model="filterQuery"
+					type="text"
+					class="kiv-tree__filter"
+					placeholder="Filter nodes..."
+					spellcheck="false"
+					autocomplete="off"
+					@keydown.esc="clearFilter"
+				/>
+				<span v-if="matchCount !== null" class="kiv-tree__match-count">
+					{{ matchCount }} match{{ matchCount === 1 ? "" : "es" }}
+				</span>
+			</div>
 		</div>
-		<div v-if="store" class="kiv-tree__body">
+		<div v-if="store" ref="bodyRef" class="kiv-tree__body">
 			<KivTreeNode :node="store.document.value.root" :depth="0" />
 		</div>
 		<div class="kiv-tree__footer">
@@ -98,6 +143,19 @@ const { width, startResize } = useResizablePanel({
 	border-radius: 8px;
 	padding: 1px 6px;
 }
+.kiv-tree__filter-row {
+	position: relative;
+}
+.kiv-tree__match-count {
+	position: absolute;
+	right: 7px;
+	top: 50%;
+	transform: translateY(-50%);
+	font-size: 0.6rem;
+	color: var(--color-text-muted);
+	pointer-events: none;
+	white-space: nowrap;
+}
 .kiv-tree__filter {
 	width: 100%;
 	box-sizing: border-box;
@@ -107,7 +165,7 @@ const { width, startResize } = useResizablePanel({
 	color: var(--color-text-primary);
 	font-size: 0.72rem;
 	font-family: inherit;
-	padding: 4px 7px;
+	padding: 4px 52px 4px 7px;
 	outline: none;
 	transition: border-color 0.12s;
 }

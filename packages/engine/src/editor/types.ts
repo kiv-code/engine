@@ -1,5 +1,5 @@
 import type { EventBus } from "../events";
-import type { KivNode } from "../types";
+import type { KivDocument, KivNode, SeoMeta } from "../types";
 
 export interface AddNodeInput {
 	parentId: string;
@@ -28,6 +28,8 @@ export interface DocumentMutations {
 		id: string,
 		patch: Partial<Pick<KivNode, "locked" | "visible">>,
 	): void;
+	updateSeoMeta(patch: Partial<SeoMeta>): void;
+	loadDocument(document: KivDocument): void;
 }
 
 export interface EditorEngineOptions {
@@ -51,7 +53,10 @@ declare module "../events/types" {
 		"node.renamed": { id: string; newId: string };
 		"node.duplicated": { id: string };
 		"node.flagsChanged": { id: string };
+		"document.seoChanged": { patch: Partial<SeoMeta> };
+		"document.loaded": { document: KivDocument };
 		"selection.changed": { ids: readonly string[] };
 		"history.changed": { canUndo: boolean; canRedo: boolean };
+		"document.save": { document: KivDocument };
 	}
 }

@@ -83,5 +83,5 @@ const linkAttrs = computed(() => {
 		v-bind="linkAttrs"
 		:style="linkStyle"
 		data-kiv-type="link"
-	>{{ text ?? 'Link' }}</component>
+	><slot>{{ text ?? 'Link' }}</slot></component>
 </template>

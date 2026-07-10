@@ -3,6 +3,7 @@ import type { KivNode } from "@kiv/engine";
 import { computed, inject, ref } from "vue";
 import { EDITOR_STORE_KEY, KIV_TREE_FILTER_KEY } from "../store/context";
 import { getNodeCategoryTint, getNodeLabel } from "../utils/node-labels";
+import { isHiddenAtBreakpoint } from "../utils/visibility";
 import NodeIcon from "./NodeIcon.vue";
 
 const props = defineProps<{ node: KivNode; depth?: number }>();
@@ -16,6 +17,14 @@ const allChildren = (node: KivNode): KivNode[] =>
 const children = computed(() => allChildren(props.node));
 const collapsed = ref(false);
 const isLocked = computed(() => props.node.locked === true);
+const isHiddenHere = computed(() =>
+	isHiddenAtBreakpoint(props.node.visible, store?.breakpoint.value ?? "base"),
+);
+
+function onRowClick(e: MouseEvent) {
+	if (e.shiftKey) store?.toggleSelect(props.node.id);
+	else store?.select(props.node.id);
+}
 
 // ── Filter ───────────────────────────────────────────────────────────────────
 const trimmedQuery = computed(() => filterQuery.value.trim().toLowerCase());
@@ -34,6 +43,14 @@ function matchesQuery(node: KivNode, q: string): boolean {
 // Hides this row entirely when filtering and neither it nor any descendant matches.
 const visible = computed(
 	() => !filterActive.value || matchesQuery(props.node, trimmedQuery.value),
+);
+// True when this row itself (not just a descendant) matches the filter — used
+// to mark the first real hit so the tree can scroll to it.
+const isOwnMatch = computed(
+	() =>
+		filterActive.value &&
+		(props.node.id.toLowerCase().includes(trimmedQuery.value) ||
+			getNodeLabel(props.node.type).toLowerCase().includes(trimmedQuery.value)),
 );
 // While filtering, force every visible branch open so matches aren't hidden
 // behind a manually-collapsed ancestor — the user's own collapse state is
@@ -150,7 +167,8 @@ function moveNode(direction: "up" | "down") {
 	store.moveNode(props.node.id, loc.parent.id, loc.slot, newIndex);
 }
 
-const isSelected = () => store?.selected.value?.id === props.node.id;
+const isSelected = () =>
+	store?.selectedIds.value.includes(props.node.id) ?? false;
 const hasChildren = computed(() => children.value.length > 0);
 
 function duplicate() {
@@ -183,7 +201,8 @@ const categoryTint = computed(() => getNodeCategoryTint(props.node.type));
 			}"
 			:style="{ paddingLeft: `${8 + (depth ?? 0) * 14}px` }"
 			:draggable="!isLocked"
-			@click="store?.select(node.id)"
+			:data-kiv-tree-match="isOwnMatch ? 'true' : undefined"
+			@click="onRowClick"
 			@dragstart="onDragStart"
 			@dragend="onDragEnd"
 			@dragover="onDragOver"
@@ -232,6 +251,12 @@ const categoryTint = computed(() => getNodeCategoryTint(props.node.type));
 				<svg width="9" height="9" viewBox="0 0 9 9" fill="none">
 					<rect x="1.5" y="4" width="6" height="4" rx="1" stroke="currentColor" stroke-width="1.1"/>
 					<path d="M2.5 4V2.8a2 2 0 0 1 4 0V4" stroke="currentColor" stroke-width="1.1"/>
+				</svg>
+			</span>
+			<span v-if="isHiddenHere" class="ktn__hidden-badge" title="Hidden at this breakpoint">
+				<svg width="9" height="9" viewBox="0 0 13 13" fill="none">
+					<path d="M1.5 6.5S3.8 2.5 6.5 2.5s5 4 5 4-2.3 4-5 4-5-4-5-4Z" stroke="currentColor" stroke-width="1.1"/>
+					<line x1="2" y1="11" x2="11" y2="2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
 				</svg>
 			</span>
 			<span v-if="hasChildren && effectiveCollapsed" class="ktn__count">{{ children.length }}</span>
@@ -433,6 +458,13 @@ const categoryTint = computed(() => getNodeCategoryTint(props.node.type));
 	align-items: center;
 	flex-shrink: 0;
 	color: var(--color-text-muted);
+}
+.ktn__hidden-badge {
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
+	color: var(--color-text-muted);
+	opacity: 0.7;
 }
 
 /* Context actions — hidden by default, visible on hover/selected */

@@ -57,6 +57,23 @@ export class HistoryManager<T> {
 		this.future = [];
 	}
 
+	/** Replaces the present snapshot in place, without recording an undo step. Used while a batch is open. */
+	replacePresent(snapshot: T, meta?: HistoryMeta): void {
+		this.current = { snapshot, meta };
+	}
+
+	/**
+	 * Records a single undo step spanning an entire batch: `baseSnapshot` (the
+	 * state before the batch started) becomes the new past entry, the present
+	 * snapshot (already advanced via `replacePresent` calls) is left as-is, and
+	 * the redo stack is cleared.
+	 */
+	commitBatch(baseSnapshot: T, meta?: HistoryMeta): void {
+		this.past.push({ snapshot: baseSnapshot, meta });
+		if (this.past.length > this.limit) this.past.shift();
+		this.future = [];
+	}
+
 	undo(): T | null {
 		const prev = this.past.pop();
 		if (!prev) return null;

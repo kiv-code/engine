@@ -82,6 +82,34 @@ describe("HistoryManager", () => {
 		expect(entries[1]?.meta).toEqual({ type: "node.created", id: "a" });
 	});
 
+	it("replacePresent updates the present without recording an undo step", () => {
+		const history = new HistoryManager("v0");
+		history.replacePresent("v0-edited");
+		expect(history.present).toBe("v0-edited");
+		expect(history.canUndo).toBe(false);
+		expect(history.canRedo).toBe(false);
+	});
+
+	it("commitBatch records the pre-batch snapshot as a single undo step", () => {
+		const history = new HistoryManager("v0");
+		history.replacePresent("v1");
+		history.replacePresent("v2");
+		history.commitBatch("v0");
+		expect(history.present).toBe("v2");
+		expect(history.canUndo).toBe(true);
+		expect(history.undo()).toBe("v0");
+	});
+
+	it("commitBatch clears the redo stack", () => {
+		const history = new HistoryManager("v0");
+		history.push("v1");
+		history.undo();
+		expect(history.canRedo).toBe(true);
+		history.replacePresent("v2");
+		history.commitBatch("v0");
+		expect(history.canRedo).toBe(false);
+	});
+
 	it("reset discards all history", () => {
 		const history = new HistoryManager("v0");
 		history.push("v1");

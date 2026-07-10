@@ -1,11 +1,20 @@
 import type { KivNode } from "@kiv/engine";
+import { ref } from "vue";
 import type { EditorStore } from "../store/editor-store";
 
-/** Nodes that support inline text editing and the prop they write to. */
-const INLINE_FIELDS: Record<string, string> = {
-	heading: "text",
-	text: "content",
-	button: "label",
+interface InlineFieldConfig {
+	/** Prop this field writes to. */
+	field: string;
+	/** When true, edits preserve HTML markup (innerHTML) instead of plain text. */
+	html?: boolean;
+}
+
+/** Nodes that support inline editing on the canvas and the prop they write to. */
+const INLINE_FIELDS: Record<string, InlineFieldConfig> = {
+	heading: { field: "text" },
+	text: { field: "content" },
+	button: { field: "label" },
+	"rich-text": { field: "content", html: true },
 };
 
 // All INLINE_FIELDS are localizable content props.
@@ -41,15 +50,42 @@ const handlerMap = new WeakMap<HTMLElement, Handlers>();
  * Activates inline editing when the user double-clicks a node in the canvas.
  * - Makes the element contenteditable
  * - On blur or Enter → commits via store.updateProps
- * - On Escape → reverts to original text
+ * - On Escape → reverts to original content
+ * - For HTML fields (rich-text), also surfaces a light bold/italic/link
+ *   toolbar and edits preserve markup (innerHTML) instead of plain text.
  */
 export function useInlineEdit(store: EditorStore) {
 	let currentEl: HTMLElement | null = null;
-	let originalText = "";
+	let currentHtml = false;
+	let originalContent = "";
 
-	function commit(el: HTMLElement, nodeId: string, field: string) {
-		const newText = el.innerText.trim();
-		if (newText !== originalText) {
+	const toolbarVisible = ref(false);
+	const toolbarTop = ref(0);
+	const toolbarLeft = ref(0);
+
+	function showToolbar(el: HTMLElement) {
+		const rect = el.getBoundingClientRect();
+		toolbarTop.value = Math.max(8, rect.top - 40);
+		toolbarLeft.value = rect.left;
+		toolbarVisible.value = true;
+	}
+
+	function hideToolbar() {
+		toolbarVisible.value = false;
+	}
+
+	function getContent(el: HTMLElement, html: boolean): string {
+		return html ? el.innerHTML.trim() : el.innerText.trim();
+	}
+
+	function commit(
+		el: HTMLElement,
+		nodeId: string,
+		field: string,
+		html: boolean,
+	) {
+		const newValue = getContent(el, html);
+		if (newValue !== originalContent) {
 			// Inline-edited fields (text/content/label) are localizable.
 			// Write into the active locale, preserving other translations,
 			// so editing "en" doesn't clobber "es"/"fr".
@@ -60,10 +96,10 @@ export function useInlineEdit(store: EditorStore) {
 				const t: Record<string, unknown> = isLocalized(existing)
 					? { ...existing.$t }
 					: {};
-				t[store.locale.value] = newText;
+				t[store.locale.value] = newValue;
 				store.updateProps(nodeId, { [field]: { $t: t } });
 			} else {
-				store.updateProps(nodeId, { [field]: newText });
+				store.updateProps(nodeId, { [field]: newValue });
 			}
 		}
 		cleanup(el);
@@ -81,15 +117,22 @@ export function useInlineEdit(store: EditorStore) {
 			handlerMap.delete(el);
 		}
 		currentEl = null;
+		hideToolbar();
 	}
 
-	function activate(el: HTMLElement, nodeId: string, field: string) {
+	function activate(
+		el: HTMLElement,
+		nodeId: string,
+		field: string,
+		html = false,
+	) {
 		if (currentEl && currentEl !== el) {
 			currentEl.contentEditable = "false";
 			currentEl.removeAttribute("data-kiv-editing");
 		}
 
-		originalText = el.innerText.trim();
+		currentHtml = html;
+		originalContent = getContent(el, html);
 		el.contentEditable = "true";
 		el.setAttribute("data-kiv-editing", "true");
 		el.style.outline = "2px dashed #6366f1";
@@ -105,23 +148,54 @@ export function useInlineEdit(store: EditorStore) {
 		sel?.addRange(range);
 
 		currentEl = el;
+		if (html) {
+			showToolbar(el);
+		} else {
+			hideToolbar();
+		}
 
-		const blurHandler: EventListener = () => commit(el, nodeId, field);
+		const blurHandler: EventListener = () => commit(el, nodeId, field, html);
 		const keydownHandler: EventListener = (ev) => {
 			const e = ev as KeyboardEvent;
 			if (e.key === "Escape") {
-				el.innerText = originalText;
+				if (html) {
+					el.innerHTML = originalContent;
+				} else {
+					el.innerText = originalContent;
+				}
 				cleanup(el);
 				e.preventDefault();
-			} else if (e.key === "Enter" && !e.shiftKey) {
+			} else if (e.key === "Enter" && !e.shiftKey && !html) {
+				// Plain-text fields commit on Enter. HTML fields let Enter insert a
+				// line break, since rich text is usually multi-paragraph.
 				e.preventDefault();
-				commit(el, nodeId, field);
+				commit(el, nodeId, field, html);
 			}
 		};
 
 		handlerMap.set(el, { blur: blurHandler, keydown: keydownHandler });
 		el.addEventListener("blur", blurHandler);
 		el.addEventListener("keydown", keydownHandler);
+	}
+
+	/** Applies a light formatting command to the active HTML field's selection. */
+	function execFormat(command: string, value?: string) {
+		if (!currentEl || !currentHtml) return;
+		currentEl.focus();
+		document.execCommand(command, false, value);
+	}
+
+	function formatBold() {
+		execFormat("bold");
+	}
+
+	function formatItalic() {
+		execFormat("italic");
+	}
+
+	function formatLink() {
+		const url = window.prompt("Link URL", "https://");
+		if (url) execFormat("createLink", url);
 	}
 
 	/** Call this from the canvas dblclick handler */
@@ -140,14 +214,14 @@ export function useInlineEdit(store: EditorStore) {
 		) as HTMLElement | null;
 		const resolvedType = typeEl?.dataset.kivType ?? "";
 
-		const field = INLINE_FIELDS[resolvedType];
-		if (!field) return;
+		const config = INLINE_FIELDS[resolvedType];
+		if (!config) return;
 
 		store.select(nodeId);
 		e.preventDefault();
 		e.stopPropagation();
 
-		activate(typeEl ?? target, nodeId, field);
+		activate(typeEl ?? target, nodeId, config.field, config.html);
 	}
 
 	/** Deactivates any active inline edit */
@@ -157,7 +231,41 @@ export function useInlineEdit(store: EditorStore) {
 			currentEl.removeAttribute("data-kiv-editing");
 			currentEl = null;
 		}
+		hideToolbar();
 	}
 
-	return { onCanvasDblClick, deactivate };
+	/** True when `type` has an inline-editable field (used to gate the Enter shortcut). */
+	function supportsInlineEdit(type: string): boolean {
+		return type in INLINE_FIELDS;
+	}
+
+	/** Programmatically starts inline editing for `nodeId`, e.g. from a keyboard shortcut rather than a dblclick. */
+	function activateById(container: HTMLElement, nodeId: string) {
+		const target = container.querySelector(
+			`[data-kiv-node-id="${nodeId}"]`,
+		) as HTMLElement | null;
+		if (!target) return;
+
+		const typeEl = (
+			target.dataset.kivType ? target : target.querySelector("[data-kiv-type]")
+		) as HTMLElement | null;
+		const resolvedType = typeEl?.dataset.kivType ?? "";
+		const config = INLINE_FIELDS[resolvedType];
+		if (!config) return;
+
+		activate(typeEl ?? target, nodeId, config.field, config.html);
+	}
+
+	return {
+		onCanvasDblClick,
+		deactivate,
+		activateById,
+		supportsInlineEdit,
+		toolbarVisible,
+		toolbarTop,
+		toolbarLeft,
+		formatBold,
+		formatItalic,
+		formatLink,
+	};
 }

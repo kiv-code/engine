@@ -10,6 +10,7 @@ export {
 	renameNode,
 	setNodeFlags,
 	updateNodeProps,
+	updateSeoMeta,
 } from "./document-ops";
 export { EditorEngine } from "./editor-engine";
 export {

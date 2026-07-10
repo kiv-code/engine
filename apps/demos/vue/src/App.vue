@@ -2,12 +2,15 @@
 import type { Breakpoint, KivDocument, KivPlugin } from "@kiv/engine";
 import { createEngine, renderToHtml } from "@kiv/engine";
 import { ALL_NODES, HOVER_EFFECTS_CSS } from "@kiv/nodes";
+import { ALL_INTERACTIVE_NODES } from "@kiv/nodes-interactive";
+import { a11yPlugin } from "@kiv/plugin-a11y";
 import {
 	type AnalyticsEvent,
 	analyticsPlugin,
 	type ClickCounts,
 	clickCounterPlugin,
 } from "@kiv/plugin-analytics";
+import { seoPlugin } from "@kiv/plugin-seo";
 import { createDefaultVueRegistry, KivRenderer } from "@kiv/vue";
 import { KivEditor } from "@kiv/vue-editor";
 import { computed, onBeforeUnmount, ref, shallowRef } from "vue";
@@ -69,8 +72,11 @@ const editorHooksPlugin: KivPlugin = {
 	},
 };
 
+// Plugin 5 — a11y checker: re-runs on every mutation, logs the issue count.
+const a11yIssueCount = shallowRef(0);
+
 const engine = createEngine({
-	nodes: [...ALL_NODES],
+	nodes: [...ALL_NODES, ...ALL_INTERACTIVE_NODES],
 	services: { storage: localStorageService },
 	media: { provider: mockMediaProvider },
 	plugins: [
@@ -88,7 +94,15 @@ const engine = createEngine({
 		}),
 		storageLogPlugin,
 		editorHooksPlugin,
+		// Plugin 6 — SEO inspector tab + live <head> sync on ⌘S.
+		seoPlugin({ origin: "https://example.com" }),
+		// Plugin 7 — Accessibility inspector tab.
+		a11yPlugin(),
 	],
+});
+
+engine.bus.on("a11y.checked", (payload) => {
+	a11yIssueCount.value = payload.issues.length;
 });
 
 // Sorted list of [button, count] for display
@@ -267,6 +281,8 @@ function exportHtml() {
 					:locale="previewLocale"
 					:breakpoint="previewBreakpoint"
 					:bus="engine.bus"
+					:media="engine.media"
+					:services="engine.services"
 				/>
 			</div>
 			<!-- Two plugins listening on the same bus -->
@@ -343,6 +359,13 @@ function exportHtml() {
 							<span class="demo-events__payload">{{ line }}</span>
 						</li>
 					</ul>
+				</div>
+				<!-- Plugins 6+7: SEO + a11y — see their inspector tabs in the Editor tab -->
+				<div class="demo-panel">
+					<div class="demo-panel__title">
+						<span class="demo-panel__dot demo-panel__dot--a11y" />
+						a11y · {{ a11yIssueCount }} issue{{ a11yIssueCount === 1 ? "" : "s" }} found — see the Accessibility tab in the Inspector
+					</div>
 				</div>
 			</aside>
 		</div>
@@ -583,6 +606,9 @@ body {
 }
 .demo-panel__dot--hooks {
 	background: #f472b6;
+}
+.demo-panel__dot--a11y {
+	background: #facc15;
 }
 
 /* Click counts (plugin 2) */

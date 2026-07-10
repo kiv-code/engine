@@ -132,6 +132,97 @@ describe("useEditorStore", () => {
 		expect(heading?.visible).toBe(false);
 	});
 
+	it("toggleSelect adds/removes ids without clearing the rest", () => {
+		const store = useEditorStore(makeDoc(), registry);
+		store.toggleSelect("section-1");
+		store.toggleSelect("heading-1");
+		expect(store.selectedIds.value).toEqual(["section-1", "heading-1"]);
+		store.toggleSelect("section-1");
+		expect(store.selectedIds.value).toEqual(["heading-1"]);
+	});
+
+	it("selectAll selects every node except the root", () => {
+		const store = useEditorStore(makeDoc(), registry);
+		store.selectAll();
+		expect(store.selectedIds.value).toEqual(["section-1", "heading-1"]);
+	});
+
+	it("clearSelection empties the selection", () => {
+		const store = useEditorStore(makeDoc(), registry);
+		store.selectAll();
+		store.clearSelection();
+		expect(store.selectedIds.value).toEqual([]);
+	});
+
+	it("selectedNodes resolves the actual nodes for every selected id", () => {
+		const store = useEditorStore(makeDoc(), registry);
+		store.selectAll();
+		expect(store.selectedNodes.value.map((n) => n.id)).toEqual([
+			"section-1",
+			"heading-1",
+		]);
+	});
+
+	it("isLocked reports a node's locked flag", () => {
+		const store = useEditorStore(makeDoc(), registry);
+		expect(store.isLocked("heading-1")).toBe(false);
+		store.setLocked("heading-1", true);
+		expect(store.isLocked("heading-1")).toBe(true);
+	});
+
+	it("updatePropsMany patches every id as a single undo step", () => {
+		const store = useEditorStore(makeDoc(), registry);
+		store.updatePropsMany(["section-1", "heading-1"], { locked: false });
+		expect(store.canUndo.value).toBe(true);
+		store.updateProps("section-1", { background: "#123" });
+		expect(
+			store.document.value.root.slots?.default?.[0]?.props.background,
+		).toBe("#123");
+		store.undo();
+		store.undo();
+		expect(
+			store.document.value.root.slots?.default?.[0]?.props.background,
+		).toBe("#fff");
+	});
+
+	it("updatePropsMany skips locked targets while still applying to the rest", () => {
+		const store = useEditorStore(makeDoc(), registry);
+		store.setLocked("heading-1", true);
+		store.updatePropsMany(["section-1", "heading-1"], { text: "changed" });
+		const section = store.document.value.root.slots?.default?.[0];
+		const heading = section?.slots?.default?.[0];
+		expect(section?.props.text).toBe("changed");
+		expect(heading?.props.text).toBe("Hello");
+	});
+
+	it("removeMany removes every id as a single undo step", () => {
+		const store = useEditorStore(makeDoc(), registry);
+		store.removeMany(["heading-1"]);
+		const children =
+			store.document.value.root.slots?.default?.[0]?.slots?.default;
+		expect(children).toHaveLength(0);
+		expect(store.canUndo.value).toBe(true);
+		store.undo();
+		expect(
+			store.document.value.root.slots?.default?.[0]?.slots?.default,
+		).toHaveLength(1);
+	});
+
+	it("startBatch/endBatch collapse manual updateProps calls into one undo step", () => {
+		const store = useEditorStore(makeDoc(), registry);
+		store.startBatch();
+		store.updateProps("section-1", { background: "#111" });
+		store.updateProps("section-1", { background: "#222" });
+		store.endBatch();
+		expect(
+			store.document.value.root.slots?.default?.[0]?.props.background,
+		).toBe("#222");
+		store.undo();
+		expect(
+			store.document.value.root.slots?.default?.[0]?.props.background,
+		).toBe("#fff");
+	});
+
 	it("forwards editor mutations onto a shared bus when provided", () => {
 		const bus = createEventBus();
 		const handler = vi.fn();
@@ -142,5 +233,31 @@ describe("useEditorStore", () => {
 			id: "heading-1",
 			patch: { text: "Hi" },
 		});
+	});
+
+	it("updateSeoMeta merges into document.seo", () => {
+		const store = useEditorStore(makeDoc(), registry);
+		store.updateSeoMeta({ title: "Home" });
+		store.updateSeoMeta({ description: "Welcome" });
+		expect(store.document.value.seo).toEqual({
+			title: "Home",
+			description: "Welcome",
+		});
+	});
+
+	it("loadDocument replaces the document as a single undo step and clears selection", () => {
+		const store = useEditorStore(makeDoc(), registry);
+		store.select("heading-1");
+		const template: KivDocument = {
+			schemaVersion: 1,
+			root: { id: "root", type: "page", props: {} },
+			i18n: { default: "en", supported: ["en"] },
+		};
+		store.loadDocument(template);
+		expect(store.document.value.root.slots).toBeUndefined();
+		expect(store.selectedIds.value).toHaveLength(0);
+		expect(store.canUndo.value).toBe(true);
+		store.undo();
+		expect(store.document.value.root.slots?.default).toHaveLength(1);
 	});
 });

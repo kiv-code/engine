@@ -47,6 +47,12 @@ const component = computed(() => {
 });
 
 const slotEntries = computed(() => Object.entries(props.node.slots ?? {}));
+
+function onDragStart(e: DragEvent) {
+	if (!isEditorMode || !e.dataTransfer) return;
+	e.dataTransfer.setData("text/plain", resolved.value.id);
+	e.dataTransfer.effectAllowed = "move";
+}
 </script>
 
 <template>
@@ -58,7 +64,9 @@ const slotEntries = computed(() => Object.entries(props.node.slots ?? {}));
 		:node-id="resolved.id"
 		:data-kiv-node-id="resolved.id"
 		:data-kiv-hidden="isVisible ? undefined : 'true'"
+		:draggable="isEditorMode || undefined"
 		:style="editorHiddenStyle"
+		@dragstart="onDragStart"
 	>
 		<template v-for="[slotName, children] in slotEntries" #[slotName]="slotProps">
 			<KivNodeRenderer

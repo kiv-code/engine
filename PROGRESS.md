@@ -1,7 +1,16 @@
-# Phase 1 Progress Log
+# Progress Log
 
-Tracks what has actually been implemented against the plan in `PLAN.md` / `CLAUDE.md`.
+Tracks what has actually been implemented against the plan in `PLAN.md` / `CLAUDE.md` and
+the step-by-step specs in `.opencode/instructions/*.md`.
 English per project convention (see CLAUDE.md → "English ONLY ... documentation").
+
+## Status: Phases 1-5 (v0.1.0 through v0.5.0) — complete
+
+Everything below Phase 1 covers `.opencode/instructions/02-phase-2-editor-maturity.md`
+through the newly-authored `05-phase-5-additional-nodes.md`. See "Phase 2", "Phase 3",
+"Phase 4", "Phase 5" sections further down for the actual per-step log — the note at the
+bottom of the old Phase 1 log ("Not done yet: everything in Phases 2-6") is now stale and
+superseded; kept below only for history, do not trust it as current status.
 
 ## Status: Phase 1 (Hardening, v0.1.0) — complete, plus early Phase 2 items
 
@@ -436,9 +445,38 @@ pnpm -r build                # 6/6 packages + demo app build clean
 
 Test count by package: engine 110, nodes 24, plugin-analytics 9, vue 55, editor 25.
 
-## Not done yet
+## Not done yet (as of Phase 1 — STALE, see Phase 2-4 below)
 
 - `PluginContext.editor` hooks (`addToolbarButton`, `addPaletteItem`, `onNodeSelect`,
   `onNodeCreate`, `onDocumentChange`) — deferred, needs real UI-extension registries in `@kiv/editor`.
 - Everything in `PLAN.md` Phases 2 (rest of it) through 6 — `locked`/`visible` was the only
   Phase 2 item pulled forward.
+
+**Correction:** both bullets above turned out to be wrong by the time Phases 2-4 were
+audited — the editor hooks were fully implemented at some point after this log entry was
+written, but this file was never updated to say so. Update this log in the same session as
+the work, not "later."
+
+---
+
+## Phases 2-5 (v0.2.0 through v0.5.0) — complete
+
+Per-item status lives in each phase's own spec file — every "Completion Checklist" is
+checked off there, that's the source of truth, not a duplicate list here:
+
+- `.opencode/instructions/02-phase-2-editor-maturity.md` — clipboard, multi-select, canvas
+  DnD, undo batching, shortcut expansion, node-locking gap fix, resize handles, zoom/pan,
+  tree search polish.
+- `.opencode/instructions/03-phase-3-content-media.md` — RichText inline editing, Video
+  html5/loom+poster/caption, Link made slot-capable, MediaProvider + media browser +
+  responsive images.
+- `.opencode/instructions/04-phase-4-interactive-plugins.md` — `@kiv/nodes-interactive`
+  (Carousel/Accordion/Tabs/Modal), `@kiv/plugin-seo`, `@kiv/plugin-a11y`, page templates.
+- `.opencode/instructions/05-phase-5-additional-nodes.md` (new spec, authored this pass) —
+  Form, Testimonial, Card, Countdown, Stat Counter, Social Icons, Spacer, Custom Embed, Table.
+
+Each phase boundary was verified independently before moving on:
+`pnpm biome check --write . && pnpm typecheck && pnpm test && pnpm -r build`, all clean.
+Final count: **486 tests** across 9 packages + demo app build clean.
+
+All of the above is currently **uncommitted** in the working tree.

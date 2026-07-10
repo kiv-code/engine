@@ -404,11 +404,13 @@ interface PageTemplate {
 
 ## Completion Checklist
 
-- [ ] `@kiv/nodes-interactive` package exists with Carousel, Accordion, Tabs, Modal
-- [ ] Interactive nodes emit correct events on state changes
-- [ ] Document mutation events fire on the bus
-- [ ] Plugin hooks (addToolbarButton, addPanel, addPaletteItem, etc.) work
-- [ ] SEO plugin produces valid meta tags and OG data
-- [ ] A11y plugin checks basic accessibility rules
-- [ ] Page templates can be saved, loaded, and applied
-- [ ] All packages build and test pass
+- [x] `@kiv/nodes-interactive` package exists with Carousel, Accordion, Tabs, Modal
+- [x] Interactive nodes emit correct events on state changes
+- [x] Document mutation events fire on the bus (was already done pre-Phase-4, see PROGRESS.md)
+- [x] Plugin hooks (addToolbarButton, addPanel, addPaletteItem, etc.) work (also already done pre-Phase-4)
+- [x] SEO plugin produces valid meta tags and OG data
+- [x] A11y plugin checks basic accessibility rules
+- [x] Page templates can be saved, loaded, and applied
+- [x] All packages build and test pass
+
+Done — see `PROGRESS.md` → "Phases 2-5" for the verified summary.

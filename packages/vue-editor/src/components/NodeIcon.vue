@@ -106,6 +106,97 @@ defineProps<{ type: string; size?: number }>();
 			<circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
 		</template>
 
+		<!-- Spacer: dashed vertical gap between arrows -->
+		<template v-else-if="type === 'spacer'">
+			<path d="M12 3v6M12 15v6" />
+			<path d="m9 6 3-3 3 3M9 18l3 3 3-3" />
+			<line x1="4" y1="12" x2="20" y2="12" stroke-dasharray="2 2" opacity="0.6" />
+		</template>
+
+		<!-- Form: clipboard with input lines and a submit bar -->
+		<template v-else-if="type === 'form'">
+			<rect x="4" y="3" width="16" height="18" rx="2" />
+			<path d="M8 8h8M8 12h8" />
+			<rect x="7" y="15.5" width="10" height="3" rx="1" fill="currentColor" stroke="none" opacity="0.6" />
+		</template>
+
+		<!-- Form Field: a single labeled input box -->
+		<template v-else-if="type === 'form-field'">
+			<path d="M4 7h9" />
+			<rect x="4" y="11" width="16" height="7" rx="1.5" />
+		</template>
+
+		<!-- Testimonial: quote marks -->
+		<template v-else-if="type === 'testimonial'">
+			<path d="M7 8a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3" />
+			<path d="M17 8a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3" />
+		</template>
+
+		<!-- Card: rounded rect with inner content lines -->
+		<template v-else-if="type === 'card'">
+			<rect x="3" y="4" width="18" height="16" rx="2.5" />
+			<path d="M7 9h10M7 13h6" opacity="0.6" />
+		</template>
+
+		<!-- Countdown: clock with ticking hand -->
+		<template v-else-if="type === 'countdown'">
+			<circle cx="12" cy="13" r="8" />
+			<path d="M12 9v4l3 2" />
+			<path d="M9 2h6" />
+		</template>
+
+		<!-- Stat: rising bars with a trend line -->
+		<template v-else-if="type === 'stat'">
+			<path d="M4 20V13M10 20V9M16 20v-7M20 20V6" />
+			<path d="M4 10l6-5 6 3 4-5" opacity="0.6" />
+		</template>
+
+		<!-- Social icons: connected nodes -->
+		<template v-else-if="type === 'social-icons'">
+			<circle cx="6" cy="7" r="2.5" />
+			<circle cx="6" cy="17" r="2.5" />
+			<circle cx="17" cy="12" r="2.5" />
+			<path d="M8.2 8.2 14.8 11M8.2 15.8 14.8 13" />
+		</template>
+
+		<!-- Custom embed: code brackets -->
+		<template v-else-if="type === 'embed'">
+			<path d="M8 5 3 12l5 7M16 5l5 7-5 7" />
+		</template>
+
+		<!-- Table: grid with header row -->
+		<template v-else-if="type === 'table'">
+			<rect x="3" y="4" width="18" height="16" rx="1.5" />
+			<path d="M3 9h18M9 9v11" opacity="0.6" />
+		</template>
+
+		<!-- Carousel: framed slide with side arrows -->
+		<template v-else-if="type === 'carousel'">
+			<rect x="6" y="4" width="12" height="16" rx="1.5" />
+			<path d="M2 12h2M20 12h2" />
+			<path d="m3 10 -1.5 2 1.5 2M21 10l1.5 2-1.5 2" />
+		</template>
+
+		<!-- Accordion / Accordion Item: stacked collapsible rows -->
+		<template v-else-if="type === 'accordion' || type === 'accordion-item'">
+			<rect x="3" y="4" width="18" height="5" rx="1" />
+			<rect x="3" y="11" width="18" height="5" rx="1" opacity="0.45" />
+			<path d="M17 6.5l1.5 1.5 1.5-1.5" />
+		</template>
+
+		<!-- Tabs / Tab Panel: tab strip over a panel -->
+		<template v-else-if="type === 'tabs' || type === 'tab-panel'">
+			<path d="M3 8h6v-3h6v3h6" />
+			<rect x="3" y="8" width="18" height="12" rx="1.5" />
+		</template>
+
+		<!-- Modal: centered dialog over a dimmed backdrop -->
+		<template v-else-if="type === 'modal'">
+			<rect x="2" y="2" width="20" height="20" rx="2" opacity="0.35" />
+			<rect x="6" y="8" width="12" height="8" rx="1.5" fill="currentColor" stroke="none" opacity="0.15" />
+			<rect x="6" y="8" width="12" height="8" rx="1.5" />
+		</template>
+
 		<!-- Fallback: diamond -->
 		<template v-else>
 			<path d="M12 3l9 9-9 9-9-9 9-9Z" />

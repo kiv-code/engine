@@ -213,13 +213,15 @@ Modify the Image node to work with MediaProvider:
 
 ## Completion Checklist
 
-- [ ] RichText node works with inline Tiptap editing
-- [ ] Video node supports YouTube, Vimeo, HTML5
-- [ ] Icon node renders icons from Lucide and Iconify
-- [ ] Divider node renders with style/color/thickness options
-- [ ] Link node wraps children in anchor element
-- [ ] MediaProvider integration resolves image URLs with transforms
-- [ ] Media browser modal works for selecting images
-- [ ] Responsive images with srcSet
-- [ ] All new nodes have tests
-- [ ] All new nodes have Vue components
+- [x] RichText node works with inline editing (contenteditable + light bold/italic/link toolbar, not Tiptap — see PROGRESS.md)
+- [x] Video node supports YouTube, Vimeo, HTML5 (+ Loom)
+- [x] Icon node renders icons from Lucide and Iconify
+- [x] Divider node renders with style/color/thickness options
+- [x] Link node wraps children in anchor element (slot-based, flat `text` kept as fallback)
+- [x] MediaProvider integration resolves image URLs with transforms
+- [x] Media browser modal works for selecting images
+- [x] Responsive images with srcSet
+- [x] All new nodes have tests
+- [x] All new nodes have Vue components
+
+Done — see `PROGRESS.md` → "Phases 2-5" for the verified summary.
