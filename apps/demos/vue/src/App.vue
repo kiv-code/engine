@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { KivEditor } from "@kiv/editor";
 import type { Breakpoint, KivDocument, KivPlugin } from "@kiv/engine";
 import { createEngine, renderToHtml } from "@kiv/engine";
 import { ALL_NODES } from "@kiv/nodes";
@@ -10,6 +9,7 @@ import {
 	clickCounterPlugin,
 } from "@kiv/plugin-analytics";
 import { createDefaultVueRegistry, KivRenderer } from "@kiv/vue";
+import { KivEditor } from "@kiv/vue-editor";
 import { computed, onBeforeUnmount, ref, shallowRef } from "vue";
 import { demoDocument } from "./demo-document";
 import { clearPage, loadPage, savePage } from "./persistence";

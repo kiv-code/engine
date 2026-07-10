@@ -9,7 +9,7 @@
 		"preview": "vite preview"
 	},
 	"dependencies": {
-		"@kiv/editor": "workspace:*",
+		"@kiv/vue-editor": "workspace:*",
 		"@kiv/engine": "workspace:*",
 		"@kiv/nodes": "workspace:*",
 		"@kiv/plugin-analytics": "workspace:*",

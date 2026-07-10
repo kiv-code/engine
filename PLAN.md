@@ -13,7 +13,7 @@ plugin-based, and designed for multi-tenant SaaS applications.
 | `@kiv/engine` | ✅ Core complete, needs hardening | Types, schema, registry, resolver, theme, events, plugins, migrations |
 | `@kiv/nodes` | ✅ Complete | 10 base node definitions + shared scales |
 | `@kiv/vue` | ✅ Complete | Vue 3 renderer + 10 components |
-| `@kiv/editor` | ⚠️ Needs decoupling | Vue 3 editor — too coupled, needs framework-agnostic core |
+| `@kiv/vue-editor` | ✅ Decoupled | Vue 3 editor UI — wraps the framework-agnostic EditorEngine from @kiv/engine |
 | `@kiv/react` | ❌ Pending | React renderer (same contract as Vue) |
 | `@kiv/nodes-interactive` | ❌ Planned | Carousel, Accordion, Tabs, Modal |
 | `@kiv/provider-s3` | ❌ Planned | S3 media provider |
@@ -88,7 +88,7 @@ Collaboration (CRDT/OT), persisted undo, custom breakpoints, AI hooks, export/im
 │   ├── engine/          @kiv/engine        (core)
 │   ├── nodes/           @kiv/nodes         (base nodes)
 │   ├── vue/             @kiv/vue           (Vue renderer)
-│   ├── editor/          @kiv/editor        (Vue editor)
+│   ├── vue-editor/      @kiv/vue-editor    (Vue editor)
 │   ├── plugin-analytics/@kiv/plugin-analytics (example)
 │   ├── nodes-interactive/@kiv/nodes-interactive (future)
 │   ├── plugin-seo/      @kiv/plugin-seo    (future)

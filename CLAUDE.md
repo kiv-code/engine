@@ -34,7 +34,7 @@ Documentation/Knowledge Base Builder, Marketing Builder, Customer Portal Builder
 @kiv/engine (core, knows nothing about frameworks/DOM)
   ← @kiv/nodes (pure definitions, no components)
     ← @kiv/vue (Vue 3 renderer)
-      ← @kiv/editor (Vue 3 editor UI)
+      ← @kiv/vue-editor (Vue 3 editor UI)
     ← @kiv/react (React renderer — shares same nodes)
 ```
 
@@ -95,7 +95,7 @@ packages/
 │       └── engine/        createEngine({theme, i18n, plugins, nodes})
 ├── nodes/             @kiv/nodes      — Pure node definitions (10 base nodes + scales)
 ├── vue/               @kiv/vue        — Vue 3 renderer (KivRenderer, KivNodeRenderer, 10 components)
-├── editor/            @kiv/editor     — Vue 3 editor UI (canvas, tree, inspector, palette, DnD)
+├── vue-editor/        @kiv/vue-editor — Vue 3 editor UI (canvas, tree, inspector, palette, DnD)
 ├── react/  ← FUTURE   @kiv/react      — React renderer
 └── plugin-analytics/  @kiv/plugin-analytics — Example plugin
 ```

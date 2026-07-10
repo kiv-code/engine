@@ -79,18 +79,9 @@ export function useEditorStore(
 
 	const selected = computed<KivNode | null>(() => {
 		const id = selectedId.value;
+		void document.value;
 		if (!id) return null;
-		function find(node: KivNode): KivNode | null {
-			if (node.id === id) return node;
-			for (const children of Object.values(node.slots ?? {})) {
-				for (const child of children) {
-					const found = find(child);
-					if (found) return found;
-				}
-			}
-			return null;
-		}
-		return find(document.value.root);
+		return engine.findNode(id)?.node ?? null;
 	});
 
 	function select(id: string | null) {

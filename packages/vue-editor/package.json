@@ -1,5 +1,5 @@
 {
-	"name": "@kiv/editor",
+	"name": "@kiv/vue-editor",
 	"version": "0.0.0",
 	"type": "module",
 	"exports": {
@@ -7,7 +7,7 @@
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.mjs"
 		},
-		"./style": "./dist/editor.css"
+		"./style": "./dist/vue-editor.css"
 	},
 	"files": [
 		"dist"

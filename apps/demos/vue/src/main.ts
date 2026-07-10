@@ -1,4 +1,4 @@
-import "@kiv/editor/style";
+import "@kiv/vue-editor/style";
 import "@kiv/vue/style";
 import { createApp } from "vue";
 import App from "./App.vue";
