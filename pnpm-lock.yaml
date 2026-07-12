@@ -271,6 +271,9 @@ importers:
       '@kiv/nodes':
         specifier: workspace:*
         version: link:../nodes
+      '@kiv/nodes-interactive':
+        specifier: workspace:*
+        version: link:../nodes-interactive
       '@kiv/vue':
         specifier: workspace:*
         version: link:../vue

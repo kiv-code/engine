@@ -1,21 +1,29 @@
 import type { KivNode } from "@kiv/engine";
 
-let counter = 0;
-function uid(): string {
-	return `tpl-${Date.now()}-${counter++}`;
-}
-
-function node(
-	type: string,
-	props: Record<string, unknown> = {},
-	slots: Record<string, KivNode[]> = {},
-): KivNode {
-	return { id: uid(), type, props, slots };
+/**
+ * Each template call gets its own counter, so ids are deterministic and
+ * reproducible (no `Date.now()`) — the first node of a given type is just
+ * its type name (e.g. "heading"), repeats get a suffix ("card-2"). Actual
+ * uniqueness against whatever's already in the document is the caller's
+ * job via `cloneNodeTree()` at insert time, same as clipboard paste/duplicate.
+ */
+function createNodeBuilder() {
+	const counts: Record<string, number> = {};
+	return function node(
+		type: string,
+		props: Record<string, unknown> = {},
+		slots: Record<string, KivNode[]> = {},
+	): KivNode {
+		const n = (counts[type] ?? 0) + 1;
+		counts[type] = n;
+		return { id: n === 1 ? type : `${type}-${n}`, type, props, slots };
+	};
 }
 
 // ── Hero ─────────────────────────────────────────────────────────────
 
 export function heroTemplate(): KivNode {
+	const node = createNodeBuilder();
 	return node(
 		"section",
 		{ paddingY: "xl", align: "center" },
@@ -30,7 +38,7 @@ export function heroTemplate(): KivNode {
 					label: "Get Started",
 					variant: "primary",
 					size: "lg",
-					action: { type: "external", href: "#" },
+					href: "#",
 				}),
 			],
 		},
@@ -40,6 +48,7 @@ export function heroTemplate(): KivNode {
 // ── Feature Grid ─────────────────────────────────────────────────────
 
 export function featureGridTemplate(): KivNode {
+	const node = createNodeBuilder();
 	const features = [
 		{
 			icon: "zap",
@@ -79,7 +88,7 @@ export function featureGridTemplate(): KivNode {
 								{ padding: "lg", align: "center" },
 								{
 									default: [
-										node("icon", { name: f.icon, size: "40px" }),
+										node("icon", { icon: f.icon, iconSize: 40 }),
 										node("heading", { level: "3", text: f.title }),
 										node("text", { text: f.desc }),
 									],
@@ -96,6 +105,7 @@ export function featureGridTemplate(): KivNode {
 // ── CTA Banner ───────────────────────────────────────────────────────
 
 export function ctaBannerTemplate(): KivNode {
+	const node = createNodeBuilder();
 	return node(
 		"section",
 		{ paddingY: "lg", background: "#6366f1" },
@@ -118,7 +128,7 @@ export function ctaBannerTemplate(): KivNode {
 					variant: "primary",
 					size: "lg",
 					background: { type: "solid", solid: "#ffffff", alpha: 1 },
-					color: "#6366f1",
+					textColor: "#6366f1",
 				}),
 			],
 		},
@@ -128,6 +138,7 @@ export function ctaBannerTemplate(): KivNode {
 // ── Testimonial ──────────────────────────────────────────────────────
 
 export function testimonialTemplate(): KivNode {
+	const node = createNodeBuilder();
 	return node(
 		"section",
 		{ paddingY: "lg" },
@@ -173,6 +184,7 @@ export function testimonialTemplate(): KivNode {
 // ── FAQ ──────────────────────────────────────────────────────────────
 
 export function faqTemplate(): KivNode {
+	const node = createNodeBuilder();
 	const items = [
 		{
 			title: "How does the free trial work?",
@@ -222,6 +234,7 @@ export function faqTemplate(): KivNode {
 // ── Pricing Table ────────────────────────────────────────────────────
 
 export function pricingTemplate(): KivNode {
+	const node = createNodeBuilder();
 	return node(
 		"section",
 		{ paddingY: "lg" },
@@ -267,6 +280,7 @@ export function pricingTemplate(): KivNode {
 // ── Footer ───────────────────────────────────────────────────────────
 
 export function footerTemplate(): KivNode {
+	const node = createNodeBuilder();
 	return node(
 		"section",
 		{ paddingY: "lg", background: "#0f172a" },
@@ -336,6 +350,7 @@ export function footerTemplate(): KivNode {
 // ── Agenda (schedule) ────────────────────────────────────────────────
 
 export function agendaScheduleTemplate(): KivNode {
+	const node = createNodeBuilder();
 	return node(
 		"section",
 		{ paddingY: "lg" },
@@ -394,6 +409,7 @@ export function agendaScheduleTemplate(): KivNode {
 // ── Team Grid ────────────────────────────────────────────────────────
 
 export function teamGridTemplate(): KivNode {
+	const node = createNodeBuilder();
 	return node(
 		"section",
 		{ paddingY: "lg" },
@@ -420,7 +436,7 @@ export function teamGridTemplate(): KivNode {
 											alt: "Team member",
 											borderRadius: "full",
 											width: "80px",
-											height: "80px",
+											aspectRatio: "1/1",
 										}),
 										node("heading", {
 											level: "4",
@@ -445,7 +461,7 @@ export function teamGridTemplate(): KivNode {
 											alt: "Team member",
 											borderRadius: "full",
 											width: "80px",
-											height: "80px",
+											aspectRatio: "1/1",
 										}),
 										node("heading", {
 											level: "4",
@@ -470,7 +486,7 @@ export function teamGridTemplate(): KivNode {
 											alt: "Team member",
 											borderRadius: "full",
 											width: "80px",
-											height: "80px",
+											aspectRatio: "1/1",
 										}),
 										node("heading", {
 											level: "4",
@@ -495,7 +511,7 @@ export function teamGridTemplate(): KivNode {
 											alt: "Team member",
 											borderRadius: "full",
 											width: "80px",
-											height: "80px",
+											aspectRatio: "1/1",
 										}),
 										node("heading", {
 											level: "4",
@@ -510,6 +526,431 @@ export function teamGridTemplate(): KivNode {
 									],
 								},
 							),
+						],
+					},
+				),
+			],
+		},
+	);
+}
+
+// ── Logo Cloud ───────────────────────────────────────────────────────
+
+export function logoCloudTemplate(): KivNode {
+	const node = createNodeBuilder();
+	return node(
+		"section",
+		{ paddingY: "lg" },
+		{
+			default: [
+				node("text", {
+					text: "Trusted by teams at",
+					align: "center",
+					color: "#64748b",
+				}),
+				node("spacer", { height: "md" }),
+				node(
+					"grid",
+					{ columns: "5", gap: "lg", alignItems: "center" },
+					{
+						default: ["Acme", "Globex", "Initech", "Umbrella", "Soylent"].map(
+							(name) =>
+								node("image", {
+									src: "",
+									alt: name,
+									fit: "contain",
+									width: "120px",
+								}),
+						),
+					},
+				),
+			],
+		},
+	);
+}
+
+// ── Contact ──────────────────────────────────────────────────────────
+
+export function contactTemplate(): KivNode {
+	const node = createNodeBuilder();
+	return node(
+		"section",
+		{ paddingY: "lg" },
+		{
+			default: [
+				node("heading", { level: "2", text: "Get in Touch", align: "center" }),
+				node("text", {
+					text: "We'd love to hear from you. Send us a message and we'll respond as soon as possible.",
+					align: "center",
+				}),
+				node("spacer", { height: "md" }),
+				node(
+					"form",
+					{ layout: "stacked", submitLabel: "Send Message" },
+					{
+						default: [
+							node("form-field", {
+								fieldType: "text",
+								name: "name",
+								label: "Name",
+								required: true,
+							}),
+							node("form-field", {
+								fieldType: "email",
+								name: "email",
+								label: "Email",
+								required: true,
+							}),
+							node("form-field", {
+								fieldType: "textarea",
+								name: "message",
+								label: "Message",
+								required: true,
+							}),
+						],
+					},
+				),
+			],
+		},
+	);
+}
+
+// ── Newsletter ───────────────────────────────────────────────────────
+
+export function newsletterTemplate(): KivNode {
+	const node = createNodeBuilder();
+	return node(
+		"section",
+		{ paddingY: "lg", background: "#f8fafc" },
+		{
+			default: [
+				node("heading", {
+					level: "2",
+					text: "Stay in the Loop",
+					align: "center",
+				}),
+				node("text", {
+					text: "Subscribe for product updates, no spam.",
+					align: "center",
+				}),
+				node("spacer", { height: "sm" }),
+				node(
+					"form",
+					{ layout: "inline", submitLabel: "Subscribe" },
+					{
+						default: [
+							node("form-field", {
+								fieldType: "email",
+								name: "email",
+								placeholder: "you@example.com",
+								required: true,
+							}),
+						],
+					},
+				),
+			],
+		},
+	);
+}
+
+// ── Gallery ──────────────────────────────────────────────────────────
+
+export function galleryTemplate(): KivNode {
+	const node = createNodeBuilder();
+	return node(
+		"section",
+		{ paddingY: "lg" },
+		{
+			default: [
+				node("heading", { level: "2", text: "Gallery", align: "center" }),
+				node("spacer", { height: "md" }),
+				node(
+					"grid",
+					{ columns: "3", gap: "md" },
+					{
+						default: [1, 2, 3, 4, 5, 6].map((i) =>
+							node("image", {
+								src: "",
+								alt: `Gallery image ${i}`,
+								fit: "cover",
+								aspectRatio: "4/3",
+								borderRadius: "md",
+							}),
+						),
+					},
+				),
+			],
+		},
+	);
+}
+
+// ── Stats ────────────────────────────────────────────────────────────
+
+export function statsTemplate(): KivNode {
+	const node = createNodeBuilder();
+	const stats = [
+		{ value: 10000, suffix: "+", label: "Active Users" },
+		{ value: 99, suffix: "%", label: "Uptime" },
+		{ value: 150, suffix: "+", label: "Countries" },
+		{ value: 24, suffix: "/7", label: "Support" },
+	];
+	return node(
+		"section",
+		{ paddingY: "lg", background: "#0f172a" },
+		{
+			default: [
+				node(
+					"grid",
+					{ columns: "4", gap: "lg" },
+					{
+						default: stats.map((s) =>
+							node("stat", {
+								value: s.value,
+								suffix: s.suffix,
+								label: s.label,
+								align: "center",
+								valueColor: { type: "solid", solid: "#ffffff", alpha: 1 },
+							}),
+						),
+					},
+				),
+			],
+		},
+	);
+}
+
+// ── Cards ────────────────────────────────────────────────────────────
+
+export function cardsTemplate(): KivNode {
+	const node = createNodeBuilder();
+	const items = [
+		{
+			title: "Starter Guide",
+			desc: "Everything you need to get up and running.",
+		},
+		{
+			title: "API Reference",
+			desc: "Complete documentation for every endpoint.",
+		},
+		{
+			title: "Best Practices",
+			desc: "Patterns and tips from our engineering team.",
+		},
+	];
+	return node(
+		"section",
+		{ paddingY: "lg" },
+		{
+			default: [
+				node("heading", { level: "2", text: "Resources", align: "center" }),
+				node("spacer", { height: "md" }),
+				node(
+					"grid",
+					{ columns: "3", gap: "lg" },
+					{
+						default: items.map((it) =>
+							node(
+								"card",
+								{ padding: "lg" },
+								{
+									default: [
+										node("heading", { level: "3", text: it.title }),
+										node("text", { text: it.desc }),
+									],
+								},
+							),
+						),
+					},
+				),
+			],
+		},
+	);
+}
+
+// ── Comparison ───────────────────────────────────────────────────────
+
+export function comparisonTemplate(): KivNode {
+	const node = createNodeBuilder();
+	return node(
+		"section",
+		{ paddingY: "lg" },
+		{
+			default: [
+				node("heading", {
+					level: "2",
+					text: "Compare Plans",
+					align: "center",
+				}),
+				node("spacer", { height: "md" }),
+				node("table", {
+					data: JSON.stringify({
+						headers: ["Feature", "Starter", "Pro", "Enterprise"],
+						rows: [
+							["Projects", "5", "Unlimited", "Unlimited"],
+							["Storage", "10GB", "100GB", "Unlimited"],
+							["Support", "Email", "Priority", "Dedicated"],
+							["SSO", "\u2014", "\u2014", "\u2713"],
+						],
+					}),
+					striped: true,
+					bordered: true,
+				}),
+			],
+		},
+	);
+}
+
+// ── Callout ──────────────────────────────────────────────────────────
+
+export function calloutTemplate(): KivNode {
+	const node = createNodeBuilder();
+	return node(
+		"card",
+		{
+			padding: "lg",
+			background: {
+				type: "solid",
+				solid: "#eef2ff",
+				alpha: 1,
+			},
+			borderWidth: 1,
+			borderColor: "#c7d2fe",
+		},
+		{
+			default: [
+				node("icon", { icon: "info", iconSize: 24, iconColor: "#6366f1" }),
+				node("heading", { level: "4", text: "Good to know" }),
+				node("text", {
+					text: "Add a short, high-visibility note here — a tip, warning, or announcement.",
+				}),
+			],
+		},
+	);
+}
+
+// ── Banner ───────────────────────────────────────────────────────────
+
+export function bannerTemplate(): KivNode {
+	const node = createNodeBuilder();
+	return node(
+		"section",
+		{ paddingY: "sm", background: "#111827" },
+		{
+			default: [
+				node(
+					"stack",
+					{ direction: "row", justify: "center", align: "center", gap: "sm" },
+					{
+						default: [
+							node("icon", {
+								icon: "megaphone",
+								iconSize: 18,
+								iconColor: "#ffffff",
+							}),
+							node("text", {
+								text: "New: version 2.0 is here — faster, lighter, and more flexible.",
+								color: "#ffffff",
+							}),
+							node("button", {
+								label: "Learn more",
+								variant: "ghost",
+								size: "sm",
+								textColor: "#ffffff",
+							}),
+						],
+					},
+				),
+			],
+		},
+	);
+}
+
+// ── Header ───────────────────────────────────────────────────────────
+
+export function headerTemplate(): KivNode {
+	const node = createNodeBuilder();
+	return node(
+		"section",
+		{ paddingY: "sm" },
+		{
+			default: [
+				node(
+					"stack",
+					{ direction: "row", justify: "space-between", align: "center" },
+					{
+						default: [
+							node("image", {
+								src: "",
+								alt: "Logo",
+								fit: "contain",
+								width: "120px",
+							}),
+							node(
+								"stack",
+								{ direction: "row", gap: "lg", align: "center" },
+								{
+									default: [
+										node("link", { text: "Product", href: "#" }),
+										node("link", { text: "Pricing", href: "#" }),
+										node("link", { text: "Docs", href: "#" }),
+									],
+								},
+							),
+							node("button", {
+								label: "Sign Up",
+								variant: "primary",
+								size: "sm",
+							}),
+						],
+					},
+				),
+			],
+		},
+	);
+}
+
+// ── Timeline ─────────────────────────────────────────────────────────
+// Reuses agenda/agenda-item — already renders a time-blocked, stripe-layout
+// list, which is exactly a timeline's shape. No new node needed.
+
+export function timelineTemplate(): KivNode {
+	const node = createNodeBuilder();
+	return node(
+		"section",
+		{ paddingY: "lg" },
+		{
+			default: [
+				node("heading", { level: "2", text: "Our Journey", align: "center" }),
+				node("spacer", { height: "md" }),
+				node(
+					"agenda",
+					{ layout: "stripe", gap: "xs" },
+					{
+						default: [
+							node("agenda-item", {
+								time: "2021",
+								label: "Founded",
+								title: "The Beginning",
+								description: "Started as a two-person side project.",
+							}),
+							node("agenda-item", {
+								time: "2022",
+								label: "Milestone",
+								title: "First 1,000 Users",
+								description: "Reached our first major user milestone.",
+							}),
+							node("agenda-item", {
+								time: "2023",
+								label: "Growth",
+								title: "Series A",
+								description: "Raised funding to accelerate growth.",
+							}),
+							node("agenda-item", {
+								time: "2024",
+								label: "Today",
+								title: "Scaling Up",
+								description: "Serving thousands of teams worldwide.",
+							}),
 						],
 					},
 				),

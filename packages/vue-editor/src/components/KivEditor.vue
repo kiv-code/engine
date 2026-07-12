@@ -8,7 +8,9 @@ import type {
 	PageTemplate,
 	Registry,
 } from "@kiv/engine";
-import { BUILT_IN_TEMPLATES } from "@kiv/engine";
+import { BUILT_IN_TEMPLATES, cloneNodeTree } from "@kiv/engine";
+import type { ContentTemplate } from "@kiv/nodes-interactive";
+import { CONTENT_TEMPLATES } from "@kiv/nodes-interactive";
 import type { VueRegistry } from "@kiv/vue";
 import { computed, onMounted, onUnmounted, provide, ref, watch } from "vue";
 import { EditorExtensions } from "../extensions";
@@ -24,6 +26,7 @@ import { EDITOR_EXTENSIONS_KEY, EDITOR_STORE_KEY } from "../store/context";
 import { useEditorStore } from "../store/editor-store";
 import { insertNodeNearSelection } from "../utils/insert-node";
 import { getNodeLabel } from "../utils/node-labels";
+import KivBlockLibrary from "./KivBlockLibrary.vue";
 import KivCanvas from "./KivCanvas.vue";
 import KivInspector from "./KivInspector.vue";
 import KivNodePalette from "./KivNodePalette.vue";
@@ -122,9 +125,16 @@ const treeOpen = ref(true);
 const inspectorOpen = ref(true);
 const paletteOpen = ref(false);
 const templatesOpen = ref(false);
+const blocksOpen = ref(false);
 
 function applyTemplate(template: PageTemplate): void {
 	store.loadDocument(template.document);
+}
+
+function insertBlock(template: ContentTemplate): void {
+	const node = cloneNodeTree(template.create());
+	insertNodeNearSelection(store, node);
+	store.select(node.id);
 }
 
 // Editor chrome theme — initialized from prop, toggleable at runtime
@@ -299,6 +309,18 @@ const BREAKPOINTS: BpDef[] = [
 						<rect x="14" y="14" width="7" height="7" rx="1"/>
 					</svg>
 				</button>
+				<button
+					type="button"
+					class="kiv-toolbar__action"
+					title="Insert block"
+					@click="blocksOpen = true"
+				>
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<rect x="3" y="3" width="18" height="7" rx="1"/>
+						<rect x="3" y="14" width="8" height="7" rx="1"/>
+						<rect x="14" y="14" width="7" height="7" rx="1"/>
+					</svg>
+				</button>
 				<div class="kiv-toolbar__sep" />
 				<button
 					type="button"
@@ -357,6 +379,13 @@ const BREAKPOINTS: BpDef[] = [
 			:templates="BUILT_IN_TEMPLATES"
 			@close="templatesOpen = false"
 			@apply="applyTemplate"
+		/>
+
+		<KivBlockLibrary
+			:open="blocksOpen"
+			:templates="CONTENT_TEMPLATES"
+			@close="blocksOpen = false"
+			@insert="insertBlock"
 		/>
 	</div>
 </template>

@@ -17,7 +17,13 @@ export default defineConfig({
 			formats: ["es"],
 		},
 		rollupOptions: {
-			external: ["vue", "@kiv/engine", "@kiv/nodes", "@kiv/vue"],
+			external: [
+				"vue",
+				"@kiv/engine",
+				"@kiv/nodes",
+				"@kiv/nodes-interactive",
+				"@kiv/vue",
+			],
 			output: {
 				globals: { vue: "Vue" },
 			},

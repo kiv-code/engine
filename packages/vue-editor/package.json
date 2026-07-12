@@ -20,6 +20,7 @@
 	"dependencies": {
 		"@kiv/engine": "workspace:*",
 		"@kiv/nodes": "workspace:*",
+		"@kiv/nodes-interactive": "workspace:*",
 		"@kiv/vue": "workspace:*",
 		"vue": "^3.5.17"
 	},
