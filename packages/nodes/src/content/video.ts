@@ -91,6 +91,8 @@ export const videoNode = defineNode({
 			);
 		}
 
+		if (!src) return noSource;
+
 		const params = new URLSearchParams();
 		if (props.autoplay) params.set("autoplay", "1");
 		if (props.loop) params.set("loop", "1");
@@ -98,8 +100,6 @@ export const videoNode = defineNode({
 		if (!props.controls) params.set("controls", "0");
 		const queryStr = params.toString();
 		const finalSrc = queryStr ? `${src}?${queryStr}` : src;
-
-		if (!finalSrc) return noSource;
 
 		return wrap(
 			`<div style="${containerStyle}" data-kiv-type="video"><iframe src="${escapeHtml(finalSrc)}" style="${mediaStyle}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`,

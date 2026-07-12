@@ -11,13 +11,16 @@ import {
 	containerNode,
 	countdownNode,
 	DEFAULT_COLOR_OR_GRADIENT,
+	dividerNode,
 	embedNode,
 	formatStatValue,
 	formFieldNode,
 	formNode,
 	gridNode,
 	headingNode,
+	iconNode,
 	imageNode,
+	linkNode,
 	pageNode,
 	parsePricingData,
 	parseSelectOptions,
@@ -25,6 +28,7 @@ import {
 	parseTableData,
 	pricingNode,
 	renderStars,
+	richTextNode,
 	sectionNode,
 	socialIconsNode,
 	spacerNode,
@@ -33,6 +37,7 @@ import {
 	tableNode,
 	testimonialNode,
 	textNode,
+	videoNode,
 } from "./index";
 
 const ctx = { locale: "en", breakpoint: "base" as const };
@@ -605,5 +610,126 @@ describe("pricing", () => {
 			ctx,
 		);
 		expect(html).toContain("Featured");
+	});
+});
+
+describe("rich-text", () => {
+	it("renders raw HTML content unescaped", () => {
+		const html = richTextNode.toHtml?.(
+			{ content: "<b>Bold</b> text" },
+			{},
+			ctx,
+		);
+		expect(html).toContain("<b>Bold</b> text");
+		expect(html).toContain('data-kiv-type="rich-text"');
+	});
+
+	it("applies typography styling (align, color)", () => {
+		const html = richTextNode.toHtml?.(
+			{ content: "Hi", align: "center", color: "#ff0000" },
+			{},
+			ctx,
+		);
+		expect(html).toContain("text-align: center");
+	});
+});
+
+describe("link", () => {
+	it("renders inline style by default with the text field", () => {
+		const html = linkNode.toHtml?.({ text: "Click me", href: "/go" }, {}, ctx);
+		expect(html).toContain('href="/go"');
+		expect(html).toContain("Click me");
+		expect(html).toContain("text-decoration: underline");
+	});
+
+	it("prefers slotted children over the flat text field", () => {
+		const html = linkNode.toHtml?.(
+			{ text: "fallback" },
+			{ default: "<span>icon</span>" },
+			ctx,
+		);
+		expect(html).toContain("<span>icon</span>");
+		expect(html).not.toContain("fallback");
+	});
+
+	it("adds rel=noopener when target is _blank", () => {
+		const html = linkNode.toHtml?.({ target: "_blank" }, {}, ctx);
+		expect(html).toContain('rel="noopener noreferrer"');
+	});
+
+	it("renders button styling when display is button", () => {
+		const html = linkNode.toHtml?.(
+			{ text: "Go", display: "button", variant: "primary" },
+			{},
+			ctx,
+		);
+		expect(html).toContain("display: inline-block");
+		expect(html).toContain("border-radius");
+	});
+});
+
+describe("icon", () => {
+	it("falls back to a font-icon class when the identifier has no SVG match", () => {
+		const html = iconNode.toHtml?.(
+			{ icon: "not-a-real-icon", iconSize: 32, iconColor: "#123456" },
+			{},
+			ctx,
+		);
+		expect(html).toContain("font-size:32px");
+		expect(html).toContain("#123456");
+		expect(html).toContain('class="not-a-real-icon"');
+	});
+
+	it("renders an empty icon span when no icon is set", () => {
+		const html = iconNode.toHtml?.({}, {}, ctx);
+		expect(html).toContain('data-kiv-type="icon"');
+	});
+});
+
+describe("video", () => {
+	it("builds a youtube-nocookie embed URL from the video id", () => {
+		const html = videoNode.toHtml?.(
+			{ provider: "youtube", videoId: "abc123" },
+			{},
+			ctx,
+		);
+		expect(html).toContain("https://www.youtube-nocookie.com/embed/abc123");
+	});
+
+	it("renders a native <video> for the html5 provider with a poster", () => {
+		const html = videoNode.toHtml?.(
+			{ provider: "html5", src: "movie.mp4", poster: "poster.jpg" },
+			{},
+			ctx,
+		);
+		expect(html).toContain("<video");
+		expect(html).toContain('poster="poster.jpg"');
+		expect(html).toContain('src="movie.mp4"');
+	});
+
+	it("renders the no-source fallback when nothing is configured", () => {
+		const html = videoNode.toHtml?.({ provider: "custom" }, {}, ctx);
+		expect(html).toContain("No video source configured");
+	});
+});
+
+describe("divider", () => {
+	it("renders the configured line style as a border-top style", () => {
+		const html = dividerNode.toHtml?.(
+			{ lineStyle: "dashed", thickness: 2, color: "#ff0000" },
+			{},
+			ctx,
+		);
+		expect(html).toContain("border-top:2px dashed #ff0000");
+	});
+
+	it("maps alignment to justify-content", () => {
+		const html = dividerNode.toHtml?.({ alignment: "right" }, {}, ctx);
+		expect(html).toContain("justify-content: flex-end");
+	});
+
+	it('resolves width "full" to 100%', () => {
+		const html = dividerNode.toHtml?.({ width: "full" }, {}, ctx);
+		expect(html).toContain("width:100%");
 	});
 });
