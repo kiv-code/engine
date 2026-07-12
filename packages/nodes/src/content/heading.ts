@@ -22,6 +22,8 @@ const typo = typographyFields({
 export const headingNode = defineNode({
 	type: "heading",
 	category: "content",
+	label: "Heading",
+	description: "H1–H6 text with fluid sizing",
 	toHtml(props) {
 		const level = String(props.level ?? "2");
 		const style = styleToString({

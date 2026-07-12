@@ -31,7 +31,7 @@ const nodeCount = computed(() =>
 function countMatches(node: KivNode, q: string): number {
 	let count =
 		node.id.toLowerCase().includes(q) ||
-		getNodeLabel(node.type).toLowerCase().includes(q)
+		getNodeLabel(node.type, store?.registry).toLowerCase().includes(q)
 			? 1
 			: 0;
 	for (const children of Object.values(node.slots ?? {})) {

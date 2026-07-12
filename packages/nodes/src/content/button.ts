@@ -32,6 +32,8 @@ const DEFAULT_VARIANT: ButtonVariantStyle = {
 export const buttonNode = defineNode({
 	type: "button",
 	category: "content",
+	label: "Button",
+	description: "CTA with primary, secondary, ghost styles",
 	toHtml(props) {
 		const variant =
 			BUTTON_VARIANT[String(props.variant ?? "primary")] ?? DEFAULT_VARIANT;

@@ -25,6 +25,7 @@ export interface EditorStoreOptions {
 }
 
 export interface EditorStore {
+	registry: Registry;
 	document: Readonly<{ value: KivDocument }>;
 	/** First selected node, or null. Kept for single-select call sites — always in sync with `selectedIds`. */
 	selected: Readonly<{ value: KivNode | null }>;
@@ -90,7 +91,7 @@ export interface EditorStore {
 /** Vue wrapper around the framework-agnostic `EditorEngine` — bridges its bus into Vue refs. */
 export function useEditorStore(
 	initialDocument: KivDocument,
-	_registry: Registry,
+	registry: Registry,
 	options: EditorStoreOptions = {},
 ): EditorStore {
 	const engine = new EditorEngine(initialDocument, {
@@ -278,6 +279,7 @@ export function useEditorStore(
 		bus: engine.bus,
 		media: options.media ?? null,
 		services: options.services ?? null,
+		registry,
 		select,
 		toggleSelect,
 		selectAll,

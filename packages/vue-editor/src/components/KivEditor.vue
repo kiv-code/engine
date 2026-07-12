@@ -345,7 +345,7 @@ const BREAKPOINTS: BpDef[] = [
 		<KivNodePalette
 			:open="paletteOpen"
 			:selected-node-type="store.selected.value?.type"
-			:selected-node-label="store.selected.value ? getNodeLabel(store.selected.value.type) : undefined"
+			:selected-node-label="store.selected.value ? getNodeLabel(store.selected.value.type, registry) : undefined"
 			:registry="registry"
 			:theme="editorTheme"
 			@close="closePalette"

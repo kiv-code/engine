@@ -189,6 +189,7 @@ const overlayItems = computed((): OverlayItem[] => {
 	const stage = stageRef.value;
 	if (!frame || !stage) return [];
 	void zoom.value; // geometry depends on the current zoom level too
+	void store?.document.value; // and on the document — a node can resize without a selection/zoom change
 	const items: OverlayItem[] = [];
 	const selectedIds = new Set(store?.selectedIds.value ?? []);
 
@@ -210,7 +211,7 @@ const overlayItems = computed((): OverlayItem[] => {
 		items.push({
 			id,
 			type,
-			label: getNodeLabelShort(type),
+			label: getNodeLabelShort(type, store?.registry),
 			top: elRect.top - stageRect.top,
 			left: elRect.left - stageRect.left,
 			width: elRect.width,
@@ -232,6 +233,7 @@ const resizableInfo = computed(() => {
 	const stage = stageRef.value;
 	if (!frame || !stage) return null;
 	void zoom.value;
+	void store?.document.value; // geometry must re-derive after any prop edit resizes the node
 	const el = frame.querySelector(
 		`[data-kiv-node-id="${node.id}"]`,
 	) as HTMLElement | null;

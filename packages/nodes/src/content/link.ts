@@ -5,6 +5,8 @@ import { BUTTON_RADIUS, BUTTON_SIZE, BUTTON_VARIANT } from "../scales";
 export const linkNode = defineNode({
 	type: "link",
 	category: "content",
+	label: "Link",
+	description: "Inline or button-style hyperlink",
 	toHtml(props, children) {
 		const href = escapeHtml(props.href ?? "#");
 		const target = String(props.target ?? "_self");

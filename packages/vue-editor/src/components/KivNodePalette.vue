@@ -4,10 +4,10 @@ import { computed, inject, nextTick, ref, watch } from "vue";
 import { EDITOR_EXTENSIONS_KEY } from "../store/context";
 import { getNodeLabel } from "../utils/node-labels";
 import {
+	buildPalette,
 	CATEGORY_META,
 	createPaletteNode,
 	LEAF_TYPES,
-	PALETTE,
 	type PaletteItem,
 } from "../utils/palette-items";
 import NodeIcon from "./NodeIcon.vue";
@@ -24,7 +24,7 @@ const extensions = inject(EDITOR_EXTENSIONS_KEY, null);
 
 // Merge hardcoded palette with plugin-registered palette items
 const mergedPalette = computed<PaletteItem[]>(() => {
-	const items = [...PALETTE];
+	const items = buildPalette(props.registry);
 	if (extensions) {
 		for (const pluginItem of extensions.getPaletteItems()) {
 			if (!items.some((i) => i.type === pluginItem.type)) {

@@ -7,6 +7,8 @@ import { resolveSpacingStyle, spacingBoxField } from "../spacing-field";
 export const gridNode = defineNode({
 	type: "grid",
 	category: "layout",
+	label: "Grid",
+	description: "Responsive multi-column grid layout",
 	toHtml(props, children) {
 		const paddingX =
 			props.paddingX && props.paddingX !== "none"

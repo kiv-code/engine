@@ -6,6 +6,8 @@ import { resolveSpacingStyle, spacingBoxField } from "../spacing-field";
 export const containerNode = defineNode({
 	type: "container",
 	category: "layout",
+	label: "Container",
+	description: "Centered max-width content wrapper",
 	toHtml(props, children) {
 		const paddingX = SPACING[String(props.paddingX ?? "md")] ?? "16px";
 		const paddingY = SPACING[String(props.paddingY ?? "none")] ?? "0";

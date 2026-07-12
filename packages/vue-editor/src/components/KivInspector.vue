@@ -417,7 +417,7 @@ function toggleVisible() {
 		<template v-else-if="store?.selected.value">
 			<!-- Node header: type badge + actions -->
 			<div class="kiv-inspector__node-header">
-				<span class="kiv-inspector__node-badge">{{ getNodeLabel(store.selected.value.type) }}</span>
+				<span class="kiv-inspector__node-badge">{{ getNodeLabel(store.selected.value.type, store.registry) }}</span>
 				<div class="kiv-inspector__node-actions">
 					<button
 						type="button"

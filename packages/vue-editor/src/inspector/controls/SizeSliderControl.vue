@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import type { FieldDescriptor } from "@kiv/engine";
-import { computed, ref, watch } from "vue";
+import { computed, inject, ref, watch } from "vue";
+import { useContinuousEdit } from "../../composables/useContinuousEdit";
+import { EDITOR_STORE_KEY } from "../../store/context";
 
 const props = defineProps<{
 	modelValue?: string;
 	descriptor?: FieldDescriptor;
 }>();
 const emit = defineEmits<{ "update:modelValue": [value: string] }>();
+
+const store = inject(EDITOR_STORE_KEY, null);
+const { start, end } = useContinuousEdit(store);
 
 const DEFAULT_UNITS = [
 	{ unit: "%", min: 0, max: 100, step: 1 },
@@ -49,6 +54,7 @@ function commit(nextAmount: number, unit: string) {
 }
 
 function onSlider(e: Event) {
+	start();
 	commit(Number((e.target as HTMLInputElement).value), activeUnit.value);
 }
 function onNumber(e: Event) {
@@ -62,7 +68,7 @@ function switchUnit(unit: string) {
 </script>
 
 <template>
-	<div class="kiv-size-slider">
+	<div class="kiv-size-slider" @change="end">
 		<div v-if="units.length > 1" class="kiv-size-slider__units">
 			<button
 				v-for="u in units"

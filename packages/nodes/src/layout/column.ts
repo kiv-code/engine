@@ -6,6 +6,8 @@ import { resolveSpacingStyle, spacingBoxField } from "../spacing-field";
 export const columnNode = defineNode({
 	type: "column",
 	category: "layout",
+	label: "Column",
+	description: "Column slot inside a Grid",
 	toHtml(props, children) {
 		const s: Record<string, string | undefined> = {};
 		if (props.span && props.span !== "auto")

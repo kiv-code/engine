@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import type { ColorOrGradientValue } from "@kiv/nodes";
 import { normalizeColorOrGradient, resolveBackgroundPaint } from "@kiv/nodes";
-import { computed } from "vue";
+import { computed, inject } from "vue";
+import { useContinuousEdit } from "../../composables/useContinuousEdit";
+import { EDITOR_STORE_KEY } from "../../store/context";
 
 const props = defineProps<{ modelValue?: unknown }>();
 const emit = defineEmits<{
 	"update:modelValue": [value: Record<string, unknown>];
 }>();
+
+const store = inject(EDITOR_STORE_KEY, null);
+const { start, end } = useContinuousEdit(store);
 
 // Handles legacy plain-string values (pre-dating this field type) safely —
 // never spread `modelValue` directly, since spreading a STRING iterates its
@@ -15,6 +20,7 @@ const emit = defineEmits<{
 const value = computed(() => normalizeColorOrGradient(props.modelValue));
 
 function patch(partial: Partial<ColorOrGradientValue>) {
+	start();
 	emit("update:modelValue", { ...value.value, ...partial });
 }
 
@@ -50,7 +56,7 @@ const previewBackground = computed(() =>
 </script>
 
 <template>
-	<div class="kiv-color-gradient">
+	<div class="kiv-color-gradient" @change="end">
 		<div class="kiv-color-gradient__tabs">
 			<button
 				type="button"

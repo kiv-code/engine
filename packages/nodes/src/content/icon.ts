@@ -5,6 +5,8 @@ import { resolveIcon } from "../icons";
 export const iconNode = defineNode({
 	type: "icon",
 	category: "media",
+	label: "Icon",
+	description: "CSS class or inline SVG icon",
 	toHtml(props) {
 		const icon = String(props.icon ?? "");
 		const size = props.iconSize ?? 24;

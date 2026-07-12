@@ -7,6 +7,8 @@ import { sizeField } from "../size-field";
 export const dividerNode = defineNode({
 	type: "divider",
 	category: "content",
+	label: "Divider",
+	description: "Horizontal rule with style, color, and spacing options",
 	toHtml(props) {
 		const thickness = props.thickness ?? 1;
 		const color = escapeHtml(props.color ?? "#d1d5db");

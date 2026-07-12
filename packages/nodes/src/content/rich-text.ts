@@ -7,6 +7,8 @@ const typo = typographyFields();
 export const richTextNode = defineNode({
 	type: "rich-text",
 	category: "content",
+	label: "Rich Text",
+	description: "HTML text block with inline formatting",
 	toHtml(props) {
 		const style = styleToString(resolveTypographyStyle(props));
 		const content = props.content ?? "";

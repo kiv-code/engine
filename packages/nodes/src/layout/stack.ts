@@ -12,6 +12,8 @@ const border = borderVisualFields({
 export const stackNode = defineNode({
 	type: "stack",
 	category: "layout",
+	label: "Group",
+	description: "Flex group — vertical column or horizontal row",
 	toHtml(props, children) {
 		const borderWidths = {
 			top: Number(props.borderTopWidth ?? 0),

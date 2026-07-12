@@ -22,6 +22,8 @@ const border = borderVisualFields({ group: "Border" });
 export const sectionNode = defineNode({
 	type: "section",
 	category: "layout",
+	label: "Section",
+	description: "Full-width section with rich background options",
 	toHtml(props, children) {
 		const s: Record<string, string | undefined> = {
 			position: "relative",

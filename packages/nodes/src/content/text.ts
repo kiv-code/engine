@@ -7,6 +7,8 @@ const typo = typographyFields();
 export const textNode = defineNode({
 	type: "text",
 	category: "content",
+	label: "Text",
+	description: "Paragraph or inline text block",
 	toHtml(props) {
 		const style = styleToString(resolveTypographyStyle(props));
 		const content =

@@ -16,6 +16,8 @@ const border = borderVisualFields({
 export const imageNode = defineNode({
 	type: "image",
 	category: "media",
+	label: "Image",
+	description: "Responsive image with cover/contain fit",
 	toHtml(props) {
 		const style = styleToString({
 			objectFit: String(props.fit ?? "cover"),

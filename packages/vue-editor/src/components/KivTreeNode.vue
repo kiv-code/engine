@@ -3,6 +3,7 @@ import type { KivNode } from "@kiv/engine";
 import { computed, inject, ref } from "vue";
 import { EDITOR_STORE_KEY, KIV_TREE_FILTER_KEY } from "../store/context";
 import { getNodeCategoryTint, getNodeLabel } from "../utils/node-labels";
+import { findParentLocation, isDescendant } from "../utils/tree";
 import { isHiddenAtBreakpoint } from "../utils/visibility";
 import NodeIcon from "./NodeIcon.vue";
 
@@ -33,7 +34,7 @@ const filterActive = computed(() => trimmedQuery.value.length > 0);
 function matchesQuery(node: KivNode, q: string): boolean {
 	if (
 		node.id.toLowerCase().includes(q) ||
-		getNodeLabel(node.type).toLowerCase().includes(q)
+		getNodeLabel(node.type, store?.registry).toLowerCase().includes(q)
 	) {
 		return true;
 	}
@@ -50,7 +51,9 @@ const isOwnMatch = computed(
 	() =>
 		filterActive.value &&
 		(props.node.id.toLowerCase().includes(trimmedQuery.value) ||
-			getNodeLabel(props.node.type).toLowerCase().includes(trimmedQuery.value)),
+			getNodeLabel(props.node.type, store?.registry)
+				.toLowerCase()
+				.includes(trimmedQuery.value)),
 );
 // While filtering, force every visible branch open so matches aren't hidden
 // behind a manually-collapsed ancestor — the user's own collapse state is
@@ -95,11 +98,6 @@ function onDrop(e: DragEvent) {
 	if (!draggedId || draggedId === props.node.id || !store || isLocked.value)
 		return;
 
-	function isDescendant(parent: KivNode, targetId: string): boolean {
-		return allChildren(parent).some(
-			(c) => c.id === targetId || isDescendant(c, targetId),
-		);
-	}
 	if (isDescendant(props.node, draggedId)) return;
 
 	const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -108,28 +106,12 @@ function onDrop(e: DragEvent) {
 	const zone = y < h * 0.25 ? "before" : y > h * 0.75 ? "after" : "inside";
 	const doc = store.document.value;
 
-	function findParent(
-		current: KivNode,
-		targetId: string,
-	): { parent: KivNode; slot: string; index: number } | null {
-		for (const [slot, ch] of Object.entries(current.slots ?? {})) {
-			for (let i = 0; i < ch.length; i++) {
-				const child = ch[i];
-				if (!child) continue;
-				if (child.id === targetId) return { parent: current, slot, index: i };
-				const found = findParent(child, targetId);
-				if (found) return found;
-			}
-		}
-		return null;
-	}
-
 	if (zone === "inside") {
 		const slots = Object.keys(props.node.slots ?? {});
 		const slotName = slots[0] ?? "default";
 		store.moveNode(draggedId, props.node.id, slotName, children.value.length);
 	} else {
-		const loc = findParent(doc.root, props.node.id);
+		const loc = findParentLocation(doc.root, props.node.id);
 		if (!loc) return;
 		store.moveNode(
 			draggedId,
@@ -144,22 +126,7 @@ function onDrop(e: DragEvent) {
 function moveNode(direction: "up" | "down") {
 	if (!store || isLocked.value) return;
 	const doc = store.document.value;
-	function findParent(
-		current: KivNode,
-		targetId: string,
-	): { parent: KivNode; slot: string; index: number } | null {
-		for (const [slot, ch] of Object.entries(current.slots ?? {})) {
-			for (let i = 0; i < ch.length; i++) {
-				const child = ch[i];
-				if (!child) continue;
-				if (child.id === targetId) return { parent: current, slot, index: i };
-				const found = findParent(child, targetId);
-				if (found) return found;
-			}
-		}
-		return null;
-	}
-	const loc = findParent(doc.root, props.node.id);
+	const loc = findParentLocation(doc.root, props.node.id);
 	if (!loc) return;
 	const newIndex = direction === "up" ? loc.index - 1 : loc.index + 1;
 	const siblings = loc.parent.slots?.[loc.slot] ?? [];
@@ -186,7 +153,9 @@ const guideOffsets = computed(() =>
 	),
 );
 
-const categoryTint = computed(() => getNodeCategoryTint(props.node.type));
+const categoryTint = computed(() =>
+	getNodeCategoryTint(props.node.type, store?.registry),
+);
 </script>
 
 <template>
@@ -245,7 +214,7 @@ const categoryTint = computed(() => getNodeCategoryTint(props.node.type));
 			<span class="ktn__icon" :style="{ background: categoryTint }">
 				<NodeIcon :type="node.type" :size="13" />
 			</span>
-			<span class="ktn__type">{{ getNodeLabel(node.type) }}</span>
+			<span class="ktn__type">{{ getNodeLabel(node.type, store?.registry) }}</span>
 			<span class="ktn__id">#{{ node.id }}</span>
 			<span v-if="isLocked" class="ktn__lock" title="Locked">
 				<svg width="9" height="9" viewBox="0 0 9 9" fill="none">

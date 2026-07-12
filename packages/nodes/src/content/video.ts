@@ -22,6 +22,8 @@ function embedUrl(
 export const videoNode = defineNode({
 	type: "video",
 	category: "media",
+	label: "Video",
+	description: "YouTube, Vimeo, or custom video embed",
 	toHtml(props) {
 		const provider = String(props.provider ?? "youtube");
 		const videoId = String(props.videoId ?? "");
