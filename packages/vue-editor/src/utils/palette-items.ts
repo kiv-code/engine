@@ -6,7 +6,19 @@ export interface PaletteItem {
 	description: string;
 	hasDefaultSlot: boolean;
 	category: string;
+	/** When true, the palette shows this item locked (dimmed, lock icon) and
+	 * refuses to insert it — see `disabledNodeTypes` on `KivEditor`/
+	 * `KivNodePalette`. Consumer-app concern: a node TYPE can be perfectly
+	 * valid in kiv but not yet wired to that app's backend (e.g. `form`
+	 * without a `services.api`), which is a per-consumer fact, not something
+	 * `defineNode()` itself should bake in. */
+	disabled?: boolean;
+	/** Shown in the tooltip/description area when `disabled` is true. */
+	disabledReason?: string;
 }
+
+/** type -> human-readable reason it's locked. Passed by the consumer app. */
+export type DisabledNodeTypes = Record<string, string>;
 
 // Display order for the built-in palette, plus the one thing the registry
 // can't express: whether a freshly-created node needs a seeded empty default
@@ -60,15 +72,21 @@ export const LEAF_TYPES = new Set(
 	PALETTE_ORDER.filter((p) => !p.hasDefaultSlot).map((p) => p.type),
 );
 
-export function buildPalette(registry?: Registry): PaletteItem[] {
+export function buildPalette(
+	registry?: Registry,
+	disabledTypes?: DisabledNodeTypes,
+): PaletteItem[] {
 	return PALETTE_ORDER.map(({ type, hasDefaultSlot }) => {
 		const compiled = registry?.get(type);
+		const disabledReason = disabledTypes?.[type];
 		return {
 			type,
 			label: compiled?.label ?? type,
 			description: compiled?.description ?? "",
 			category: compiled?.category ?? "content",
 			hasDefaultSlot,
+			disabled: disabledReason !== undefined,
+			disabledReason,
 		};
 	});
 }
@@ -76,16 +94,20 @@ export function buildPalette(registry?: Registry): PaletteItem[] {
 export function paletteItemByType(
 	type: string,
 	registry?: Registry,
+	disabledTypes?: DisabledNodeTypes,
 ): PaletteItem | undefined {
 	const entry = PALETTE_ORDER.find((p) => p.type === type);
 	if (!entry) return undefined;
 	const compiled = registry?.get(type);
+	const disabledReason = disabledTypes?.[type];
 	return {
 		type,
 		label: compiled?.label ?? type,
 		description: compiled?.description ?? "",
 		category: compiled?.category ?? "content",
 		hasDefaultSlot: entry.hasDefaultSlot,
+		disabled: disabledReason !== undefined,
+		disabledReason,
 	};
 }
 

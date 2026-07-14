@@ -7,6 +7,7 @@ import {
 	buildPalette,
 	CATEGORY_META,
 	createPaletteNode,
+	type DisabledNodeTypes,
 	LEAF_TYPES,
 	type PaletteItem,
 } from "../utils/palette-items";
@@ -18,22 +19,29 @@ const props = defineProps<{
 	selectedNodeLabel?: string;
 	registry?: Registry;
 	theme?: "dark" | "light";
+	/** type -> reason it's locked (dimmed, non-insertable) in this app — e.g.
+	 * `{ form: "Not wired to a backend yet" }`. See `KivEditor`'s prop of the
+	 * same name. */
+	disabledNodeTypes?: DisabledNodeTypes;
 }>();
 
 const extensions = inject(EDITOR_EXTENSIONS_KEY, null);
 
 // Merge hardcoded palette with plugin-registered palette items
 const mergedPalette = computed<PaletteItem[]>(() => {
-	const items = buildPalette(props.registry);
+	const items = buildPalette(props.registry, props.disabledNodeTypes);
 	if (extensions) {
 		for (const pluginItem of extensions.getPaletteItems()) {
 			if (!items.some((i) => i.type === pluginItem.type)) {
+				const disabledReason = props.disabledNodeTypes?.[pluginItem.type];
 				items.push({
 					type: pluginItem.type,
 					label: pluginItem.label,
 					description: pluginItem.description ?? "",
 					hasDefaultSlot: true,
 					category: pluginItem.category ?? "content",
+					disabled: disabledReason !== undefined,
+					disabledReason,
 				});
 			}
 		}
@@ -113,6 +121,7 @@ function isActive(item: PaletteItem) {
 }
 
 function addNode(item: PaletteItem) {
+	if (item.disabled) return;
 	const node = createPaletteNode(
 		item.type,
 		props.registry,
@@ -126,6 +135,10 @@ function addNode(item: PaletteItem) {
 // the canvas underneath) closes immediately — the canvas becomes the drop
 // target for the rest of the gesture, like a picker that dismisses on drag.
 function onCardDragStart(e: DragEvent, item: PaletteItem) {
+	if (item.disabled) {
+		e.preventDefault();
+		return;
+	}
 	if (!e.dataTransfer) return;
 	e.dataTransfer.setData("application/x-kiv-node-type", item.type);
 	e.dataTransfer.setData("text/plain", item.type);
@@ -232,9 +245,14 @@ function onKeydown(e: KeyboardEvent) {
 										v-for="item in categoryItems(cat)"
 										:key="item.type"
 										type="button"
-										draggable="true"
+										:draggable="!item.disabled"
 										class="kiv-palette-modal__card"
-										:class="{ 'kiv-palette-modal__card--active': isActive(item) }"
+										:class="{
+											'kiv-palette-modal__card--active': isActive(item),
+											'kiv-palette-modal__card--disabled': item.disabled,
+										}"
+										:aria-disabled="item.disabled || undefined"
+										:title="item.disabled ? item.disabledReason : undefined"
 										@click="addNode(item)"
 										@dragstart="onCardDragStart($event, item)"
 										@mouseenter="activeIndex = flatItems.findIndex((f) => f.type === item.type)"
@@ -246,8 +264,14 @@ function onKeydown(e: KeyboardEvent) {
 												background: `${CATEGORY_META[item.category]?.color}1a`,
 											}"
 										><NodeIcon :type="item.type" :size="18" /></span>
+										<span class="kiv-palette-modal__card-lock" v-if="item.disabled" aria-hidden="true">
+											<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<rect x="3" y="11" width="18" height="11" rx="2" />
+												<path d="M7 11V7a5 5 0 0 1 10 0v4" />
+											</svg>
+										</span>
 										<span class="kiv-palette-modal__card-name">{{ item.label }}</span>
-										<span class="kiv-palette-modal__card-desc">{{ item.description }}</span>
+										<span class="kiv-palette-modal__card-desc">{{ item.disabled ? item.disabledReason : item.description }}</span>
 									</button>
 								</div>
 							</div>
@@ -419,6 +443,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 .kiv-palette-modal__card {
+	position: relative;
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
@@ -442,6 +467,24 @@ function onKeydown(e: KeyboardEvent) {
 }
 .kiv-palette-modal__card:active {
 	transform: scale(0.98);
+}
+
+.kiv-palette-modal__card--disabled {
+	cursor: not-allowed;
+	opacity: 0.45;
+}
+.kiv-palette-modal__card--disabled:hover {
+	background: var(--color-surface-overlay);
+	border-color: transparent;
+}
+.kiv-palette-modal__card-lock {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--color-text-muted);
 }
 
 .kiv-palette-modal__card-icon {

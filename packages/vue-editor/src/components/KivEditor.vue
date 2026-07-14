@@ -26,6 +26,7 @@ import { EDITOR_EXTENSIONS_KEY, EDITOR_STORE_KEY } from "../store/context";
 import { useEditorStore } from "../store/editor-store";
 import { insertNodeNearSelection } from "../utils/insert-node";
 import { getNodeLabel } from "../utils/node-labels";
+import type { DisabledNodeTypes } from "../utils/palette-items";
 import KivBlockLibrary from "./KivBlockLibrary.vue";
 import KivCanvas from "./KivCanvas.vue";
 import KivInspector from "./KivInspector.vue";
@@ -43,6 +44,12 @@ const props = defineProps<{
 	bus?: EventBus;
 	/** Engine reference — when provided, triggered `setEditorExtensions()` on mount so plugins' `onEditorReady` fires. */
 	engine?: KivEngine;
+	/** Node types to show locked in the "Add node" palette (dimmed, lock icon,
+	 * not insertable) — e.g. `{ form: "Requires a backend endpoint this app
+	 * hasn't wired up yet." }`. Use for node types that are valid in kiv but
+	 * not yet functional in THIS consuming app, to avoid the "looks usable,
+	 * silently does nothing" trap. */
+	disabledNodeTypes?: DisabledNodeTypes;
 }>();
 
 const emit = defineEmits<{ "update:document": [doc: KivDocument] }>();
@@ -370,6 +377,7 @@ const BREAKPOINTS: BpDef[] = [
 			:selected-node-label="store.selected.value ? getNodeLabel(store.selected.value.type, registry) : undefined"
 			:registry="registry"
 			:theme="editorTheme"
+			:disabled-node-types="props.disabledNodeTypes"
 			@close="closePalette"
 			@add="onPaletteAdd"
 		/>
@@ -384,6 +392,7 @@ const BREAKPOINTS: BpDef[] = [
 		<KivBlockLibrary
 			:open="blocksOpen"
 			:templates="CONTENT_TEMPLATES"
+			:disabled-node-types="props.disabledNodeTypes"
 			@close="blocksOpen = false"
 			@insert="insertBlock"
 		/>

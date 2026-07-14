@@ -1,17 +1,48 @@
 <script setup lang="ts">
+import type { KivNode } from "@kivcode/engine";
 import type { ContentTemplate } from "@kivcode/nodes-interactive";
 import { computed, ref } from "vue";
+import type { DisabledNodeTypes } from "../utils/palette-items";
 import NodeIcon from "./NodeIcon.vue";
 
 const props = defineProps<{
 	open: boolean;
 	templates: ContentTemplate[];
+	/** Same map as `KivEditor`/`KivNodePalette` — any template whose node
+	 * tree contains one of these types is shown locked too (a "Contact form"
+	 * block is just as unusable as inserting `form` directly). */
+	disabledNodeTypes?: DisabledNodeTypes;
 }>();
 
 const emit = defineEmits<{
 	close: [];
 	insert: [template: ContentTemplate];
 }>();
+
+function treeContainsDisabledType(node: KivNode): string | undefined {
+	if (!props.disabledNodeTypes) return undefined;
+	const reason = props.disabledNodeTypes[node.type];
+	if (reason !== undefined) return reason;
+	for (const children of Object.values(node.slots ?? {})) {
+		for (const child of children) {
+			const found = treeContainsDisabledType(child);
+			if (found !== undefined) return found;
+		}
+	}
+	return undefined;
+}
+
+// Templates build their tree lazily via `create()` — calling it here just to
+// inspect node types is cheap and side-effect-free (fresh ids are discarded).
+const disabledTemplateReasons = computed<Record<string, string>>(() => {
+	if (!props.disabledNodeTypes) return {};
+	const out: Record<string, string> = {};
+	for (const t of props.templates) {
+		const reason = treeContainsDisabledType(t.create());
+		if (reason !== undefined) out[t.id] = reason;
+	}
+	return out;
+});
 
 const search = ref("");
 const activeCategory = ref<string | null>(null);
@@ -62,6 +93,7 @@ const filtered = computed(() => {
 });
 
 function insert(template: ContentTemplate): void {
+	if (disabledTemplateReasons.value[template.id] !== undefined) return;
 	emit("insert", template);
 	emit("close");
 }
@@ -129,13 +161,22 @@ function onKeydown(e: KeyboardEvent): void {
 							:key="template.id"
 							type="button"
 							class="kiv-block-modal__card"
+							:class="{ 'kiv-block-modal__card--disabled': disabledTemplateReasons[template.id] !== undefined }"
+							:aria-disabled="disabledTemplateReasons[template.id] !== undefined || undefined"
+							:title="disabledTemplateReasons[template.id]"
 							@click="insert(template)"
 						>
 							<div class="kiv-block-modal__thumb">
 								<NodeIcon :type="iconType(template.icon)" :size="28" />
 							</div>
+							<span v-if="disabledTemplateReasons[template.id] !== undefined" class="kiv-block-modal__lock" aria-hidden="true">
+								<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<rect x="3" y="11" width="18" height="11" rx="2" />
+									<path d="M7 11V7a5 5 0 0 1 10 0v4" />
+								</svg>
+							</span>
 							<span class="kiv-block-modal__name">{{ template.label }}</span>
-							<span class="kiv-block-modal__desc">{{ template.description }}</span>
+							<span class="kiv-block-modal__desc">{{ disabledTemplateReasons[template.id] ?? template.description }}</span>
 						</button>
 						<div v-if="!filtered.length" class="kiv-block-modal__empty">
 							No blocks match "{{ search }}"
@@ -263,6 +304,7 @@ function onKeydown(e: KeyboardEvent): void {
 	align-content: start;
 }
 .kiv-block-modal__card {
+	position: relative;
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
@@ -276,6 +318,22 @@ function onKeydown(e: KeyboardEvent): void {
 }
 .kiv-block-modal__card:hover {
 	border-color: rgba(99, 102, 241, 0.4);
+}
+.kiv-block-modal__card--disabled {
+	cursor: not-allowed;
+	opacity: 0.45;
+}
+.kiv-block-modal__card--disabled:hover {
+	border-color: transparent;
+}
+.kiv-block-modal__lock {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--color-text-muted);
 }
 .kiv-block-modal__thumb {
 	width: 100%;
