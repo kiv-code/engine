@@ -20,6 +20,11 @@ const store = inject(EDITOR_STORE_KEY, null);
 const media = computed(() => store?.media ?? null);
 const browserOpen = ref(false);
 
+// This same control is used for both image AND video fields (e.g. the
+// `video` node's `src`/`poster`) — an <img> preview of a video URL just
+// shows a broken-image icon, so branch on the extension.
+const isVideo = computed(() => /\.(mp4|webm|mov|m4v|ogv)(\?.*)?$/i.test(props.modelValue));
+
 function selectAsset(asset: MediaAsset) {
 	emit("update:modelValue", asset.url);
 	browserOpen.value = false;
@@ -33,7 +38,8 @@ function clear() {
 <template>
 	<div class="kiv-media-picker">
 		<div v-if="modelValue" class="kiv-media-picker__preview">
-			<img :src="modelValue" alt="" class="kiv-media-picker__thumb" />
+			<video v-if="isVideo" :src="modelValue" muted class="kiv-media-picker__thumb" />
+			<img v-else :src="modelValue" alt="" class="kiv-media-picker__thumb" />
 			<button
 				type="button"
 				class="kiv-media-picker__clear"

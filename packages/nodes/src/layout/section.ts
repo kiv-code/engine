@@ -149,10 +149,12 @@ export const sectionNode = defineNode({
 		backgroundImage: f.text({
 			label: "Background image URL",
 			group: "Background",
+			pluginControl: "media-picker",
 		}),
 		backgroundVideo: f.text({
 			label: "Background video URL",
 			group: "Background",
+			pluginControl: "media-picker",
 		}),
 		backgroundSize: f.select(["cover", "contain", "auto"], {
 			label: "Background size",

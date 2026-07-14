@@ -35,7 +35,13 @@ const activeSet = ref<IconSet>(
 	findSetForValue(props.modelValue) ?? (iconSets[0] as IconSet),
 );
 const search = ref("");
-const showCustom = ref(props.modelValue.trim().startsWith("<svg"));
+// `withDefaults` only substitutes its default for `undefined` — a node whose
+// `icon` field resolved to an explicit `null` (e.g. a localizable field with
+// no translation for the active locale) skips it entirely, so `modelValue`
+// can legitimately be `null` here despite the `string` prop type. Every
+// direct `.trim()`/`.startsWith()` call on it needs this same `?? ""` guard —
+// skipping it takes down the whole Inspector panel (see selectedInfo below).
+const showCustom = ref((props.modelValue ?? "").trim().startsWith("<svg"));
 const showAll = ref(false);
 
 const svgCache = new Map<string, string>();
@@ -75,7 +81,7 @@ const totalCount = computed(() => filteredNames.value.length);
 
 const selectedInfo = computed(() => {
 	if (showCustom.value || !props.modelValue) return null;
-	if (props.modelValue.trim().startsWith("<svg")) return null;
+	if ((props.modelValue ?? "").trim().startsWith("<svg")) return null;
 	return resolveIconInfo(props.modelValue);
 });
 

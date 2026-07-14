@@ -120,11 +120,13 @@ export const videoNode = defineNode({
 			label: "Video URL",
 			group: "Content",
 			showIf: { field: "provider", equals: ["custom", "html5"] },
+			pluginControl: "media-picker",
 		}),
 		poster: f.text({
 			label: "Poster image",
 			group: "Content",
 			showIf: { field: "provider", equals: "html5" },
+			pluginControl: "media-picker",
 		}),
 		caption: f.text({
 			label: "Caption",

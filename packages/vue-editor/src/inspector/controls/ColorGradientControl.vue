@@ -56,6 +56,15 @@ function setStopAlpha(
 const previewBackground = computed(() =>
 	resolveBackgroundPaint(value.value, "transparent"),
 );
+
+// The native <input type="color"> only accepts a complete "#rrggbb" value —
+// while the user is mid-typing in the paired text field (e.g. just "#" or
+// "#ff"), passing that partial string through logs a benign but noisy
+// console warning ("does not conform to the required format"). `||` alone
+// doesn't catch this since a partial string is still truthy.
+function safeHex(v: string | undefined, fallback: string): string {
+	return v && /^#[0-9a-fA-F]{6}$/.test(v) ? v : fallback;
+}
 </script>
 
 <template>
@@ -86,7 +95,7 @@ const previewBackground = computed(() =>
 				<input
 					type="color"
 					class="kiv-color-gradient__swatch"
-					:value="value.solid || '#000000'"
+					:value="safeHex(value.solid, '#000000')"
 					@input="patch({ solid: ($event.target as HTMLInputElement).value })"
 				/>
 				<input
@@ -119,7 +128,7 @@ const previewBackground = computed(() =>
 					<input
 						type="color"
 						class="kiv-color-gradient__swatch"
-						:value="value[stop.key] || (stop.optional ? '#ffffff' : '#000000')"
+						:value="safeHex(value[stop.key], stop.optional ? '#ffffff' : '#000000')"
 						@input="setStopColor(stop.key, ($event.target as HTMLInputElement).value)"
 					/>
 					<input
